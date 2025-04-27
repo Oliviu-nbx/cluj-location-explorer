@@ -24,7 +24,7 @@ class AnalyticsService {
 
     window.dataLayer = window.dataLayer || [];
     function gtag(...args: any[]) {
-      window.dataLayer.push(arguments);
+      window.dataLayer?.push(arguments);
     }
     gtag('js', new Date());
     gtag('config', 'G-XXXXXXXXXX'); // Replace with your GA ID
