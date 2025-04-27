@@ -24,33 +24,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('Checking admin status for user:', userId);
       
-      // Using a direct query with service role to bypass RLS
-      // This avoids the infinite recursion
+      // Using direct query instead of RPC to avoid TypeScript issues
+      // This simpler approach should work without causing recursion
       const { data, error } = await supabase
-        .rpc('check_is_admin', { user_id: userId })
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', userId)
         .maybeSingle();
       
       if (error) {
         console.error('Error fetching admin status:', error);
-        
-        // Fallback to a simple query if RPC fails
-        // Try direct query with explicit select
-        const profileQuery = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', userId)
-          .maybeSingle();
-          
-        if (profileQuery.error) {
-          console.error('Fallback query also failed:', profileQuery.error);
-          return false;
-        }
-        
-        return profileQuery.data?.is_admin === true;
+        return false;
       }
       
       console.log('Admin status check result:', data);
-      return data === true;
+      return data?.is_admin === true;
     } catch (err) {
       console.error('Exception checking admin status:', err);
       return false;
