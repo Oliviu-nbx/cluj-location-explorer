@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { Star, Bookmark } from "lucide-react";
 import { Location } from "@/types/location";
 import { FavoritesService } from "@/services/FavoritesService";
 import { useAuth } from "@/components/AuthContext";
+import OptimizedImage from "./OptimizedImage";
 
 interface LocationCardProps {
   location: Location;
@@ -45,11 +47,11 @@ const LocationCard = ({ location }: LocationCardProps) => {
 
   return (
     <Card className="location-card h-full flex flex-col animate-fade-in">
-      <div className="relative">
-        <img 
+      <div className="relative h-48">
+        <OptimizedImage 
           src={imageSrc} 
-          alt={`Photo of ${location.name} in Cluj-Napoca`} 
-          className="location-card-image"
+          alt={`${location.name} in Cluj-Napoca`} 
+          className="h-full w-full"
         />
         <div className="absolute top-2 right-2 flex gap-2">
           <Badge variant="secondary">

@@ -1,118 +1,208 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Location, LocationCategory } from '../types/location';
+import CacheService from './CacheService';
 
-export const LocationService = {
-  getAllLocations: async (): Promise<Location[]> => {
-    const { data, error } = await supabase
-      .from('locations')
-      .select(`
-        *,
-        category:category_id (id, name),
-        photos:location_photos (
-          photo_reference,
-          width,
-          height,
-          attribution
-        ),
-        reviews:location_reviews (
-          author_name,
-          rating,
-          text,
-          time,
-          profile_photo_url
-        )
-      `)
-      .order('name');
+export class LocationService {
+  // Cache TTL values in milliseconds
+  private static CACHE_TTL = {
+    ALL_LOCATIONS: 10 * 60 * 1000, // 10 minutes
+    CATEGORY_LOCATIONS: 5 * 60 * 1000, // 5 minutes
+    LOCATION_DETAILS: 15 * 60 * 1000, // 15 minutes
+    NEARBY_LOCATIONS: 5 * 60 * 1000  // 5 minutes
+  };
 
-    if (error) throw error;
+  static async getAllLocations(): Promise<Location[]> {
+    const cacheKey = 'all_locations';
     
-    // Transform data to match Location interface
-    return (data || []).map(item => transformLocationData(item));
-  },
-  
-  getLocationsByCategory: async (category: LocationCategory): Promise<Location[]> => {
-    const { data, error } = await supabase
-      .from('locations')
-      .select(`
-        *,
-        category:category_id (id, name),
-        photos:location_photos (
-          photo_reference,
-          width,
-          height,
-          attribution
-        ),
-        reviews:location_reviews (
-          author_name,
-          rating,
-          text,
-          time,
-          profile_photo_url
-        )
-      `)
-      .eq('category_id', category)
-      .order('name');
-
-    if (error) throw error;
+    // Try to get from cache first
+    const cachedData = CacheService.get<Location[]>(cacheKey);
+    if (cachedData) {
+      console.log('Using cached data for all locations');
+      return cachedData;
+    }
     
-    // Transform data to match Location interface
-    return (data || []).map(item => transformLocationData(item));
-  },
-  
-  getLocationBySlug: async (slug: string): Promise<Location | undefined> => {
-    const { data, error } = await supabase
-      .from('locations')
-      .select(`
-        *,
-        category:category_id (id, name),
-        photos:location_photos (
-          photo_reference,
-          width,
-          height,
-          attribution
-        ),
-        reviews:location_reviews (
-          author_name,
-          rating,
-          text,
-          time,
-          profile_photo_url
-        )
-      `)
-      .eq('slug', slug)
-      .single();
+    // If not in cache, fetch from API
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select(`
+          *,
+          category:category_id (id, name),
+          photos:location_photos (
+            photo_reference,
+            width,
+            height,
+            attribution
+          ),
+          reviews:location_reviews (
+            author_name,
+            rating,
+            text,
+            time,
+            profile_photo_url
+          )
+        `)
+        .order('name');
 
-    if (error) throw error;
-    
-    // Transform data to match Location interface
-    return data ? transformLocationData(data) : undefined;
-  },
-  
-  getNearbyLocations: async (latitude: number, longitude: number, limit: number = 5): Promise<Location[]> => {
-    const { data, error } = await supabase
-      .from('locations')
-      .select(`
-        *,
-        category:category_id (id, name),
-        photos:location_photos (
-          photo_reference,
-          width,
-          height,
-          attribution
-        )
-      `)
-      .order('created_at')
-      .limit(limit);
+      if (error) throw error;
+      
+      // Transform data to match Location interface
+      const locations = (data || []).map(item => transformLocationData(item));
+      
+      // Cache the result
+      CacheService.set(cacheKey, locations, this.CACHE_TTL.ALL_LOCATIONS);
+      
+      return locations;
+    } catch (error) {
+      console.error('Error fetching locations:', error);
+      throw error;
+    }
+  }
 
-    if (error) throw error;
+  static async getLocationsByCategory(category: LocationCategory): Promise<Location[]> {
+    const cacheKey = `locations_by_category_${category}`;
     
-    // Transform data to match Location interface
-    return (data || []).map(item => transformLocationData(item));
-  },
-  
+    // Try to get from cache first
+    const cachedData = CacheService.get<Location[]>(cacheKey);
+    if (cachedData) {
+      console.log(`Using cached data for category: ${category}`);
+      return cachedData;
+    }
+    
+    // If not in cache, fetch from API
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select(`
+          *,
+          category:category_id (id, name),
+          photos:location_photos (
+            photo_reference,
+            width,
+            height,
+            attribution
+          ),
+          reviews:location_reviews (
+            author_name,
+            rating,
+            text,
+            time,
+            profile_photo_url
+          )
+        `)
+        .eq('category_id', category)
+        .order('name');
+
+      if (error) throw error;
+      
+      // Transform data to match Location interface
+      const locations = (data || []).map(item => transformLocationData(item));
+      
+      // Cache the result
+      CacheService.set(cacheKey, locations, this.CACHE_TTL.CATEGORY_LOCATIONS);
+      
+      return locations;
+    } catch (error) {
+      console.error(`Error fetching locations for category ${category}:`, error);
+      throw error;
+    }
+  }
+
+  static async getLocationBySlug(slug: string): Promise<Location | null> {
+    const cacheKey = `location_by_slug_${slug}`;
+    
+    // Try to get from cache first
+    const cachedData = CacheService.get<Location>(cacheKey);
+    if (cachedData) {
+      console.log(`Using cached data for location: ${slug}`);
+      return cachedData;
+    }
+    
+    // If not in cache, fetch from API
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select(`
+          *,
+          category:category_id (id, name),
+          photos:location_photos (
+            photo_reference,
+            width,
+            height,
+            attribution
+          ),
+          reviews:location_reviews (
+            author_name,
+            rating,
+            text,
+            time,
+            profile_photo_url
+          )
+        `)
+        .eq('slug', slug)
+        .single();
+
+      if (error) throw error;
+      
+      // Transform data to match Location interface
+      const location = data ? transformLocationData(data) : undefined;
+      
+      // Cache the result if found
+      if (location) {
+        CacheService.set(cacheKey, location, this.CACHE_TTL.LOCATION_DETAILS);
+      }
+      
+      return location;
+    } catch (error) {
+      console.error(`Error fetching location with slug ${slug}:`, error);
+      throw error;
+    }
+  }
+
+  static async getNearbyLocations(latitude: number, longitude: number, radius: number = 5): Promise<Location[]> {
+    const cacheKey = `nearby_locations_${latitude}_${longitude}_${radius}`;
+    
+    // Try to get from cache first
+    const cachedData = CacheService.get<Location[]>(cacheKey);
+    if (cachedData) {
+      console.log(`Using cached data for nearby locations at (${latitude}, ${longitude})`);
+      return cachedData;
+    }
+    
+    // If not in cache, fetch from API
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select(`
+          *,
+          category:category_id (id, name),
+          photos:location_photos (
+            photo_reference,
+            width,
+            height,
+            attribution
+          )
+        `)
+        .order('created_at')
+        .limit(radius);
+
+      if (error) throw error;
+      
+      // Transform data to match Location interface
+      const locations = (data || []).map(item => transformLocationData(item));
+      
+      // Cache the result
+      CacheService.set(cacheKey, locations, this.CACHE_TTL.NEARBY_LOCATIONS);
+      
+      return locations;
+    } catch (error) {
+      console.error(`Error fetching nearby locations:`, error);
+      throw error;
+    }
+  }
+
   // New method to add locations from n8n
-  addLocationFromN8n: async (locationData: any): Promise<Location | null> => {
+  static async addLocationFromN8n(locationData: any): Promise<Location | null> {
     try {
       // Ensure we have all required fields
       const requiredFields = ['name', 'category_id', 'slug', 'address', 'latitude', 'longitude', 'place_id'];
