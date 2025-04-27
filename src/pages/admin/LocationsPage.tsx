@@ -126,7 +126,10 @@ export default function LocationsPage() {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => handleEditLocation(location)}
+                      onClick={() => {
+                        setLocationToEdit(location);
+                        setIsEditLocationOpen(true);
+                      }}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
