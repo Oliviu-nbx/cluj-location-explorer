@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { LocationService } from "@/services/LocationService";
-import { Location, LocationCategory } from "@/types/location";
+import { Location, LocationCategory, CATEGORY_LABELS } from "@/types/location";
 import LocationsGrid from "@/components/LocationsGrid";
 import MapView from "@/components/MapView";
 import SearchBar from "@/components/SearchBar";
@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CATEGORY_LABELS } from "@/types/location";
 
 const HomePage = () => {
   const [allLocations, setAllLocations] = useState<Location[]>([]);
@@ -52,12 +51,8 @@ const HomePage = () => {
     setFilteredLocations(filtered);
   }, [selectedCategory, searchQuery, allLocations]);
 
-  const handleCategoryChange = (category: LocationCategory | 'all-categories') => {
-    if (category === 'all-categories') {
-      setSelectedCategory('');
-    } else {
-      setSelectedCategory(category as LocationCategory);
-    }
+  const handleCategoryChange = (category: LocationCategory | '') => {
+    setSelectedCategory(category);
   };
 
   return (
