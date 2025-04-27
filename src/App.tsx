@@ -1,17 +1,18 @@
+
 import {
   createBrowserRouter,
   Navigate,
   RouterProvider,
 } from "react-router-dom";
 import "./App.css";
-import AdminLayout from "./components/layout/AdminLayout";
-import MainLayout from "./components/layout/MainLayout";
+import AdminLayout from "./layouts/AdminLayout";
+import MainLayout from "./layouts/MainLayout";
 import LocationsPage from "./pages/admin/LocationsPage";
 import CategoriesPage from "./pages/admin/CategoriesPage";
 import ScrapingPage from "./pages/admin/ScrapingPage";
 import HomePage from "./pages/HomePage";
-import AboutPage from "./pages/AboutPage";
-import ContactPage from "./pages/ContactPage";
+import AboutPage from "./pages/HomePage";  // Placeholder until AboutPage is created
+import ContactPage from "./pages/HomePage";  // Placeholder until ContactPage is created
 import ProfilePage from "./pages/ProfilePage";
 import AuthPage from "./pages/AuthPage";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
