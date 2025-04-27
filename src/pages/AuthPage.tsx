@@ -15,32 +15,22 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
 
-  // Check if the user is already logged in and redirect appropriately
+  // Check current auth status and redirect if already logged in
   useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        // Check if user is admin to redirect to admin panel
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', data.session.user.id)
-          .single();
-        
-        if (profileData?.is_admin) {
-          console.log('User is admin, redirecting to admin panel');
-          navigate('/admin');
-        } else {
-          console.log('User is not admin, redirecting to home');
-          navigate('/');
-        }
-      }
-    };
+    console.log('AuthPage - Auth check:', { user: !!user, isAdmin });
     
-    checkSession();
-  }, [navigate]);
+    if (user) {
+      if (isAdmin && window.location.pathname.includes('/admin')) {
+        console.log('AuthPage - Already logged in as admin, redirecting to admin panel');
+        navigate('/admin');
+      } else if (!window.location.pathname.includes('/admin')) {
+        console.log('AuthPage - Already logged in as regular user, redirecting to home');
+        navigate('/');
+      }
+    }
+  }, [user, isAdmin, navigate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,31 +65,17 @@ const AuthPage = () => {
     
     try {
       console.log('Attempting to sign in with:', email);
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
 
-      console.log('Sign in successful, checking admin status');
+      console.log('Sign in successful, will be redirected by auth state change');
+      // Don't navigate here - let the auth state change handler do it
+      // This prevents race conditions with admin status checks
       
-      // Check if user is admin
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', data.user.id)
-        .single();
-      
-      console.log('Profile data:', profileData);
-      
-      if (profileData?.is_admin) {
-        console.log('User is admin, redirecting to admin panel');
-        navigate('/admin');
-      } else {
-        console.log('User is not admin, redirecting to home');
-        navigate('/');
-      }
     } catch (error: any) {
       console.error('Sign in error:', error);
       toast({
@@ -107,7 +83,6 @@ const AuthPage = () => {
         title: "Error",
         description: error.message,
       });
-    } finally {
       setLoading(false);
     }
   };

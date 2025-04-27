@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
@@ -8,24 +8,30 @@ import { MapPin, ListOrdered, LogOut } from "lucide-react";
 export default function AdminLayout() {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    console.log('AdminLayout - Current auth state:', { user: !!user, isAdmin });
+    console.log('AdminLayout - Auth state check:', { user: !!user, isAdmin, email: user?.email });
 
     if (!user) {
       console.log('AdminLayout - No user found, redirecting to /auth');
-      navigate("/auth");
+      navigate("/auth", { replace: true });
       return;
     }
 
     if (!isAdmin) {
       console.log('AdminLayout - User is not admin, redirecting to /auth');
-      navigate("/auth");
+      navigate("/auth", { replace: true });
+      return;
     }
+
+    // If we get here, user is logged in and is admin
+    console.log('AdminLayout - User is authorized as admin');
+    setIsAuthorized(true);
   }, [user, isAdmin, navigate]);
 
-  if (!user || !isAdmin) {
-    console.log('AdminLayout - Rendering null due to no user or not admin');
+  if (!isAuthorized) {
+    console.log('AdminLayout - Not rendering admin UI, waiting for auth check');
     return null;
   }
 
@@ -41,19 +47,15 @@ export default function AdminLayout() {
           <SidebarContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="/admin/locations">
-                    <MapPin />
-                    <span>Locations</span>
-                  </a>
+                <SidebarMenuButton onClick={() => navigate("/admin/locations")}>
+                  <MapPin />
+                  <span>Locations</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <a href="/admin/categories">
-                    <ListOrdered />
-                    <span>Categories</span>
-                  </a>
+                <SidebarMenuButton onClick={() => navigate("/admin/categories")}>
+                  <ListOrdered />
+                  <span>Categories</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
