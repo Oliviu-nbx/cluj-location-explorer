@@ -18,8 +18,16 @@ import SitemapIndexPage from "./pages/sitemap/SitemapIndexPage";
 import LocationSitemapPage from "./pages/sitemap/LocationSitemapPage";
 import PagesSitemapPage from "./pages/sitemap/PagesSitemapPage";
 import AnalyticsDashboard from "./components/AnalyticsDashboard";
+import ErrorMonitoringDashboard from "./components/ErrorMonitoringDashboard";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: process.env.NODE_ENV === 'production' ? 3 : 0,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -39,6 +47,7 @@ const App = () => (
               <Route path="locations" element={<LocationsPage />} />
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="analytics" element={<AnalyticsDashboard />} />
+              <Route path="monitoring" element={<ErrorMonitoringDashboard />} />
             </Route>
             
             <Route path="/sitemap.xml" element={<SitemapIndexPage />} />
