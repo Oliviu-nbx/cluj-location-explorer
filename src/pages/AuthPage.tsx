@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/components/AuthContext';
 
 const AuthPage = () => {
   const [email, setEmail] = useState('');
@@ -14,6 +15,32 @@ const AuthPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
+
+  // Check if the user is already logged in and redirect appropriately
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        // Check if user is admin to redirect to admin panel
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', data.session.user.id)
+          .single();
+        
+        if (profileData?.is_admin) {
+          console.log('User is admin, redirecting to admin panel');
+          navigate('/admin');
+        } else {
+          console.log('User is not admin, redirecting to home');
+          navigate('/');
+        }
+      }
+    };
+    
+    checkSession();
+  }, [navigate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,15 +74,34 @@ const AuthPage = () => {
     setLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Attempting to sign in with:', email);
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
 
-      navigate('/');
+      console.log('Sign in successful, checking admin status');
+      
+      // Check if user is admin
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', data.user.id)
+        .single();
+      
+      console.log('Profile data:', profileData);
+      
+      if (profileData?.is_admin) {
+        console.log('User is admin, redirecting to admin panel');
+        navigate('/admin');
+      } else {
+        console.log('User is not admin, redirecting to home');
+        navigate('/');
+      }
     } catch (error: any) {
+      console.error('Sign in error:', error);
       toast({
         variant: "destructive",
         title: "Error",

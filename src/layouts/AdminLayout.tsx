@@ -10,13 +10,27 @@ export default function AdminLayout() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user || !isAdmin) {
+    console.log('AdminLayout - Current auth state:', { user: !!user, isAdmin });
+
+    if (!user) {
+      console.log('AdminLayout - No user found, redirecting to /auth');
+      navigate("/auth");
+      return;
+    }
+
+    if (!isAdmin) {
+      console.log('AdminLayout - User is not admin, redirecting to /auth');
       navigate("/auth");
     }
   }, [user, isAdmin, navigate]);
 
-  if (!user || !isAdmin) return null;
+  if (!user || !isAdmin) {
+    console.log('AdminLayout - Rendering null due to no user or not admin');
+    return null;
+  }
 
+  console.log('AdminLayout - Rendering admin interface for user:', user?.email);
+  
   return (
     <SidebarProvider defaultOpen>
       <div className="flex min-h-screen w-full">
