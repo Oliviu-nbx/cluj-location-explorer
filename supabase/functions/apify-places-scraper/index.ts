@@ -1,6 +1,5 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.5.0'
-import { cors } from 'https://deno.land/x/cors@v1.2.2/mod.ts'
 
 // Configure CORS
 const corsHeaders = {
@@ -114,8 +113,11 @@ Deno.serve(async (req) => {
         maxCrawledPlaces: 10,
       }
 
-      // Start the Apify actor run
-      const apifyUrl = `https://api.apify.com/v2/acts/${actor}/runs`
+      console.log(`Starting Apify scraper with actor: ${actor}`)
+      console.log(`Search parameters: ${JSON.stringify(params)}`)
+
+      // Start the Apify actor run - using correct endpoint URL
+      const apifyUrl = `https://api.apify.com/v2/actor-runs`
       const response = await fetch(apifyUrl, {
         method: 'POST',
         headers: {
@@ -123,13 +125,15 @@ Deno.serve(async (req) => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ 
-          runInput: params 
+          actorId: actor,
+          input: params 
         })
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(`Apify API error: ${JSON.stringify(error)}`)
+        const errorText = await response.text()
+        console.error(`Apify API error: Status ${response.status}, Response: ${errorText}`)
+        throw new Error(`Apify API error: ${response.status} - ${errorText}`)
       }
 
       const runData = await response.json()
@@ -157,6 +161,7 @@ Deno.serve(async (req) => {
             
             const statusData = await statusResponse.json()
             const status = statusData.data.status
+            console.log(`Run status: ${status}, attempt: ${retryCount + 1}`)
             
             if (status === 'SUCCEEDED') {
               isFinished = true
@@ -171,6 +176,7 @@ Deno.serve(async (req) => {
               }
               
               runResult = await datasetResponse.json()
+              console.log(`Retrieved ${runResult.length} results from Apify`)
             } else if (['FAILED', 'ABORTED', 'TIMED-OUT'].includes(status)) {
               throw new Error(`Run ${runId} ended with status: ${status}`)
             }

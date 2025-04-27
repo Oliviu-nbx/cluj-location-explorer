@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { N8nWebhookSetup } from "@/components/admin/N8nWebhookSetup";
 import { supabase } from "@/integrations/supabase/client";
+import { AlertCircle, Check, Loader2 } from "lucide-react";
 
 const ScrapingPage = () => {
   const { toast } = useToast();
@@ -25,10 +26,13 @@ const ScrapingPage = () => {
   const [googleQuery, setGoogleQuery] = useState("");
   const [googleRadius, setGoogleRadius] = useState("1000");
   const [googleType, setGoogleType] = useState("restaurant");
+  const [statusMessage, setStatusMessage] = useState("");
 
   // Handle Google Places API direct search
   const handleGoogleSearch = async () => {
     setLoading((prev) => ({ ...prev, googlePlaces: true }));
+    setStatusMessage("Geocoding location...");
+    
     try {
       // Validate inputs
       if (!googleQuery) {
@@ -45,11 +49,16 @@ const ScrapingPage = () => {
         },
       });
 
-      if (!geocodeResponse.data || !geocodeResponse.data.results || geocodeResponse.data.results.length === 0) {
-        throw new Error("Location not found");
+      console.log("Geocode response:", geocodeResponse);
+
+      if (!geocodeResponse.data || 
+          !geocodeResponse.data.results || 
+          geocodeResponse.data.results.length === 0) {
+        throw new Error("Location not found. Please try a different search term.");
       }
 
       const location = geocodeResponse.data.results[0].geometry.location;
+      setStatusMessage(`Found location. Searching for ${googleType}s...`);
 
       // Search for places near the location
       const placesResponse = await supabase.functions.invoke("google-places", {
@@ -63,56 +72,69 @@ const ScrapingPage = () => {
         },
       });
 
-      if (!placesResponse.data || !placesResponse.data.results || placesResponse.data.results.length === 0) {
-        throw new Error("No places found");
+      console.log("Places response:", placesResponse);
+
+      if (!placesResponse.data || 
+          !placesResponse.data.results || 
+          placesResponse.data.results.length === 0) {
+        throw new Error(`No ${googleType}s found at this location. Try increasing the radius or changing the place type.`);
       }
 
       // Process each place
+      setStatusMessage(`Found ${placesResponse.data.results.length} places. Getting details...`);
       const places = placesResponse.data.results;
       let processedCount = 0;
 
       for (const place of places) {
-        // Get additional details for each place
-        const detailsResponse = await supabase.functions.invoke("google-places", {
-          body: {
-            action: "getPlaceDetails",
-            params: {
-              placeId: place.place_id,
-            },
-          },
-        });
-
-        if (!detailsResponse.data || !detailsResponse.data.result) {
-          console.warn(`No details found for place: ${place.name}`);
-          continue;
-        }
-
-        const placeDetails = detailsResponse.data.result;
+        setStatusMessage(`Processing ${processedCount + 1} of ${places.length}...`);
         
-        if (placeDetails) {
-          // Map the place details to our location structure
-          const location = {
-            place_id: placeDetails.place_id,
-            name: placeDetails.name,
-            slug: placeDetails.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
-            category_id: googleType,
-            address: placeDetails.formatted_address || place.vicinity,
-            latitude: placeDetails.geometry.location.lat,
-            longitude: placeDetails.geometry.location.lng,
-            phone: placeDetails.formatted_phone_number,
-            website: placeDetails.website,
-            rating: placeDetails.rating,
-            price_level: placeDetails.price_level
-          };
-
-          // Store the location in our database
-          const { error } = await supabase.functions.invoke("process-location", {
-            body: location
+        try {
+          // Get additional details for each place
+          const detailsResponse = await supabase.functions.invoke("google-places", {
+            body: {
+              action: "getPlaceDetails",
+              params: {
+                placeId: place.place_id,
+              },
+            },
           });
 
-          if (!error) {
-            processedCount++;
+          if (!detailsResponse.data || !detailsResponse.data.result) {
+            console.warn(`No details found for place: ${place.name}`);
+            continue;
           }
+
+          const placeDetails = detailsResponse.data.result;
+          
+          if (placeDetails) {
+            // Map the place details to our location structure
+            const location = {
+              place_id: placeDetails.place_id,
+              name: placeDetails.name,
+              slug: placeDetails.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+              category_id: googleType,
+              address: placeDetails.formatted_address || place.vicinity,
+              latitude: placeDetails.geometry.location.lat,
+              longitude: placeDetails.geometry.location.lng,
+              phone: placeDetails.formatted_phone_number,
+              website: placeDetails.website,
+              rating: placeDetails.rating,
+              price_level: placeDetails.price_level
+            };
+
+            // Store the location in our database
+            const { data, error } = await supabase.functions.invoke("process-location", {
+              body: location
+            });
+
+            if (error) {
+              console.error("Error processing location:", error);
+            } else {
+              processedCount++;
+            }
+          }
+        } catch (placeError) {
+          console.error(`Error processing place ${place.name}:`, placeError);
         }
       }
 
@@ -129,12 +151,15 @@ const ScrapingPage = () => {
       });
     } finally {
       setLoading((prev) => ({ ...prev, googlePlaces: false }));
+      setStatusMessage("");
     }
   };
 
   // Handle Apify scraping
   const handleApifyScraping = async () => {
     setLoading((prev) => ({ ...prev, apify: true }));
+    setStatusMessage("Starting Apify scraper...");
+    
     try {
       // Validate inputs
       if (!apifyToken) {
@@ -151,6 +176,8 @@ const ScrapingPage = () => {
         maxCrawledPlaces: parseInt(apifyMaxPlaces),
       };
 
+      console.log("Starting Apify scraper with params:", searchParams);
+      
       const response = await supabase.functions.invoke("apify-places-scraper", {
         body: {
           token: apifyToken,
@@ -158,6 +185,8 @@ const ScrapingPage = () => {
           searchParams
         }
       });
+
+      console.log("Apify response:", response);
 
       if (response.error) {
         throw new Error(response.error);
@@ -176,12 +205,20 @@ const ScrapingPage = () => {
       });
     } finally {
       setLoading((prev) => ({ ...prev, apify: false }));
+      setStatusMessage("");
     }
   };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
       <h1 className="text-3xl font-bold">Location Scraping Tools</h1>
+      
+      {statusMessage && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded flex items-center">
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          <p>{statusMessage}</p>
+        </div>
+      )}
       
       <Tabs defaultValue="google">
         <TabsList className="grid w-full grid-cols-3">
@@ -242,8 +279,19 @@ const ScrapingPage = () => {
               <Button 
                 onClick={handleGoogleSearch} 
                 disabled={loading.googlePlaces}
+                className="w-full sm:w-auto"
               >
-                {loading.googlePlaces ? "Searching..." : "Search Places"}
+                {loading.googlePlaces ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Search Places
+                  </>
+                )}
               </Button>
             </CardFooter>
           </Card>
@@ -309,8 +357,19 @@ const ScrapingPage = () => {
               <Button 
                 onClick={handleApifyScraping} 
                 disabled={loading.apify}
+                className="w-full sm:w-auto"
               >
-                {loading.apify ? "Starting..." : "Start Scraping"}
+                {loading.apify ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Starting...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Start Scraping
+                  </>
+                )}
               </Button>
             </CardFooter>
           </Card>

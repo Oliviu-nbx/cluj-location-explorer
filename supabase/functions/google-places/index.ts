@@ -1,6 +1,5 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@googlemaps/google-maps-services-js"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,7 +7,6 @@ const corsHeaders = {
 }
 
 const GOOGLE_MAPS_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY')!;
-const googleMapsClient = createClient({});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -28,7 +26,9 @@ serve(async (req) => {
           ? `${location.lat},${location.lng}`
           : location;
         
-        // Use fetch directly instead of the client
+        console.log(`Searching for places near ${locationParam} with radius ${radius} and type ${type}`);
+        
+        // Use fetch directly with the Google Places API
         const url = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
         url.searchParams.append('location', locationParam);
         url.searchParams.append('radius', radius.toString());
@@ -38,6 +38,8 @@ serve(async (req) => {
         const response = await fetch(url.toString());
         const data = await response.json();
         
+        console.log(`Found ${data.results?.length || 0} places`);
+        
         return new Response(JSON.stringify(data), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
@@ -46,7 +48,8 @@ serve(async (req) => {
       case 'getPlaceDetails': {
         const { placeId } = params
         
-        // Use fetch directly instead of the client
+        console.log(`Getting details for place: ${placeId}`);
+        
         const url = new URL('https://maps.googleapis.com/maps/api/place/details/json');
         url.searchParams.append('place_id', placeId);
         url.searchParams.append('key', GOOGLE_MAPS_API_KEY);
@@ -62,13 +65,16 @@ serve(async (req) => {
       case 'geocode': {
         const { address } = params
         
-        // Use fetch directly instead of the client
+        console.log(`Geocoding address: ${address}`);
+        
         const url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
         url.searchParams.append('address', address);
         url.searchParams.append('key', GOOGLE_MAPS_API_KEY);
         
         const response = await fetch(url.toString());
         const data = await response.json();
+        
+        console.log(`Geocode results: ${data.results?.length || 0}`);
         
         return new Response(JSON.stringify(data), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
