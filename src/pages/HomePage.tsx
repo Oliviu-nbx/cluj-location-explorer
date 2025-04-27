@@ -53,6 +53,16 @@ const HomePage = () => {
     setFilteredLocations(filtered);
   }, [selectedCategory, searchQuery, allLocations]);
 
+  // Handle category selection from search bar
+  const handleCategoryChange = (category: LocationCategory | '') => {
+    // If "all-categories" is selected, treat it as empty string (show all)
+    if (category === 'all-categories') {
+      setSelectedCategory('');
+    } else {
+      setSelectedCategory(category);
+    }
+  };
+
   return (
     <>
       <SEO 
@@ -76,7 +86,7 @@ const HomePage = () => {
       <div className="container">
         <SearchBar
           onSearch={setSearchQuery}
-          onCategoryChange={setSelectedCategory}
+          onCategoryChange={handleCategoryChange}
           selectedCategory={selectedCategory}
         />
         

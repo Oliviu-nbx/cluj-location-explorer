@@ -34,7 +34,7 @@ const SearchBar = ({ onSearch, onCategoryChange, selectedCategory }: SearchBarPr
           <SelectValue placeholder="All Categories" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Categories</SelectItem>
+          <SelectItem value="all-categories">All Categories</SelectItem>
           {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
             <SelectItem key={key} value={key}>{label}</SelectItem>
           ))}
