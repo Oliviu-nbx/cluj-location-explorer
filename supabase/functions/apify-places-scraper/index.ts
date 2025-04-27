@@ -134,8 +134,10 @@ Deno.serve(async (req) => {
       console.log(`Search parameters: ${JSON.stringify(params)}`);
       
       try {
-        // Use the proper Apify API endpoint
-        const apifyBaseUrl = `https://api.apify.com/v2/acts/${actor}/runs`;
+        // Use the updated Apify API endpoint URL format
+        // The correct format is: https://api.apify.com/v2/actor-tasks/[ACTOR_TASK_ID]/runs
+        // However, for actors directly we use: https://api.apify.com/v2/actor-runs
+        const apifyBaseUrl = `https://api.apify.com/v2/actor-runs`;
         
         console.log(`Calling Apify API at: ${apifyBaseUrl}`);
         
@@ -146,7 +148,10 @@ Deno.serve(async (req) => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ input: params })
+          body: JSON.stringify({ 
+            actorId: actor,
+            input: params 
+          })
         });
 
         const responseText = await response.text();
