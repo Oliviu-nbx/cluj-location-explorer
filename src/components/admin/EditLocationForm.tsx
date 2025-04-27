@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { DatabaseLocationService } from "@/services/DatabaseLocationService";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -53,7 +53,6 @@ export function EditLocationForm({ location, onSuccess }: EditLocationFormProps)
   async function onSubmit(values: FormValues) {
     setIsSubmitting(true);
     try {
-      // Update the location with the new values
       const updatedLocation: Location = {
         ...location,
         name: values.name,
@@ -68,7 +67,7 @@ export function EditLocationForm({ location, onSuccess }: EditLocationFormProps)
         lastUpdated: new Date().toISOString(),
       };
       
-      await LocationService.updateLocation(updatedLocation);
+      await DatabaseLocationService.updateLocation(updatedLocation);
       onSuccess();
     } catch (error) {
       console.error("Error updating location:", error);

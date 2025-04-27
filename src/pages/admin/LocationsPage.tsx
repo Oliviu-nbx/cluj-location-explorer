@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { LocationService } from "@/services/LocationService";
+import { DatabaseLocationService } from "@/services/DatabaseLocationService";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, RefreshCw, Webhook, Edit, Trash2 } from "lucide-react";
@@ -24,7 +23,7 @@ export default function LocationsPage() {
   
   const { data: locations, isLoading, refetch } = useQuery({
     queryKey: ["admin-locations", page],
-    queryFn: () => LocationService.getAllLocations(),
+    queryFn: () => DatabaseLocationService.getAllLocations(),
   });
 
   const handleAddLocation = () => {
@@ -39,7 +38,7 @@ export default function LocationsPage() {
   const handleDeleteLocation = async (locationId: string) => {
     if (confirm("Are you sure you want to delete this location?")) {
       try {
-        await LocationService.deleteLocation(locationId);
+        await DatabaseLocationService.deleteLocation(locationId);
         toast({
           title: "Success",
           description: "Location has been deleted successfully",
