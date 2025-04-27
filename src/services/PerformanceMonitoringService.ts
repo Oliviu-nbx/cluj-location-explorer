@@ -1,4 +1,11 @@
 
+// Extend Window interface to include gtag
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+  }
+}
+
 type PerformanceMetric = {
   name: string;
   value: number;
@@ -125,7 +132,7 @@ class PerformanceMonitoringService {
     // For example, Google Analytics, custom backend, etc.
     if (window.gtag) {
       report.metrics.forEach(metric => {
-        (window as any).gtag('event', 'performance_metric', {
+        window.gtag?.('event', 'performance_metric', {
           metric_name: metric.name,
           metric_value: metric.value,
           metric_rating: metric.rating
