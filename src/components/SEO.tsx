@@ -11,6 +11,34 @@ interface SEOProps {
   type?: string;
 }
 
+// Define interface for structured data to fix TypeScript errors
+interface StructuredData {
+  "@context": string;
+  "@type": string;
+  name: string;
+  address: {
+    "@type": string;
+    streetAddress: string;
+    addressLocality: string;
+    addressRegion: string;
+    addressCountry: string;
+  };
+  geo: {
+    "@type": string;
+    latitude: number;
+    longitude: number;
+  };
+  url: string;
+  telephone?: string;
+  sameAs?: string[];
+  aggregateRating?: {
+    "@type": string;
+    ratingValue: number;
+    reviewCount?: number;
+  };
+  priceRange?: string;
+}
+
 const SEO = ({ 
   title,
   description,
@@ -36,7 +64,7 @@ const SEO = ({
     };
     
     // Base structured data that all locations share
-    const baseStructuredData = {
+    const baseStructuredData: StructuredData = {
       "@context": "https://schema.org",
       "@type": getSchemaType(location.category),
       "name": location.name,
