@@ -1,10 +1,9 @@
-
+import { QueryClientProvider } from "@tanstack/react-query";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./components/AuthContext";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainLayout from "./layouts/MainLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import HomePage from "./pages/HomePage";
@@ -41,6 +40,7 @@ const App = () => (
             <Route path="/" element={<MainLayout />}>
               <Route index element={<HomePage />} />
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="/category/:categorySlug" element={<CategoryPage />} />
               <Route path="/:categorySlug/:locationSlug" element={<LocationPage />} />
             </Route>
@@ -52,11 +52,9 @@ const App = () => (
               <Route path="analytics" element={<AnalyticsDashboard />} />
               <Route path="monitoring" element={<ErrorMonitoringDashboard />} />
             </Route>
-            
             <Route path="/sitemap.xml" element={<SitemapIndexPage />} />
             <Route path="/sitemap-pages.xml" element={<PagesSitemapPage />} />
             <Route path="/sitemap-:categorySlug.xml" element={<LocationSitemapPage />} />
-            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
