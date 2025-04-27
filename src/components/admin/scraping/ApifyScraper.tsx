@@ -1,0 +1,149 @@
+
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Check, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+export const ApifyScraper = () => {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [apifyToken, setApifyToken] = useState("");
+  const [apifyQuery, setApifyQuery] = useState("restaurants in Cluj-Napoca");
+  const [apifyMaxPlaces, setApifyMaxPlaces] = useState("10");
+  const [apifyActor, setApifyActor] = useState("apify/google-places-scraper");
+
+  const handleApifyScraping = async () => {
+    setLoading(true);
+    
+    try {
+      // Validate inputs
+      if (!apifyToken) {
+        throw new Error("Apify token is required");
+      }
+      
+      if (!apifyQuery) {
+        throw new Error("Search query is required");
+      }
+
+      const searchParams = {
+        queries: apifyQuery,
+        language: "en",
+        maxCrawledPlaces: parseInt(apifyMaxPlaces),
+      };
+
+      console.log("Starting Apify scraper with params:", searchParams);
+      
+      const response = await supabase.functions.invoke("apify-places-scraper", {
+        body: {
+          token: apifyToken,
+          actorId: apifyActor,
+          searchParams
+        }
+      });
+
+      console.log("Apify response:", response);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      toast({
+        title: "Apify Scraping Started",
+        description: "The scraping job has been started. Results will be processed in the background.",
+      });
+    } catch (error) {
+      console.error("Error starting Apify scraper:", error);
+      toast({
+        variant: "destructive",
+        title: "Scraping Failed",
+        description: error.message || "An error occurred while starting the Apify scraper.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Apify Scraper</CardTitle>
+        <CardDescription>
+          Use Apify's Google Places Scraper for more comprehensive data collection.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="apifyToken">Apify API Token</Label>
+          <Input
+            id="apifyToken"
+            type="password"
+            placeholder="Your Apify API token"
+            value={apifyToken}
+            onChange={(e) => setApifyToken(e.target.value)}
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="apifyQuery">Search Query</Label>
+          <Textarea
+            id="apifyQuery"
+            placeholder="e.g. restaurants in Cluj-Napoca"
+            value={apifyQuery}
+            onChange={(e) => setApifyQuery(e.target.value)}
+          />
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="apifyMaxPlaces">Max Places</Label>
+            <Input
+              id="apifyMaxPlaces"
+              type="number"
+              value={apifyMaxPlaces}
+              onChange={(e) => setApifyMaxPlaces(e.target.value)}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="apifyActor">Actor</Label>
+            <Select value={apifyActor} onValueChange={setApifyActor}>
+              <SelectTrigger id="apifyActor">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="apify/google-places-scraper">Google Places Scraper</SelectItem>
+                <SelectItem value="apify/tripadvisor-scraper">TripAdvisor Scraper</SelectItem>
+                <SelectItem value="apify/booking-scraper">Booking.com Scraper</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button 
+          onClick={handleApifyScraping} 
+          disabled={loading}
+          className="w-full sm:w-auto"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Starting...
+            </>
+          ) : (
+            <>
+              <Check className="mr-2 h-4 w-4" />
+              Start Scraping
+            </>
+          )}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
