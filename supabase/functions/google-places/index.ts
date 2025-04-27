@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@googlemaps/google-maps-services-js'
+import { Client } from "https://esm.sh/@googlemaps/google-maps-services-js@3.3.36"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,7 +8,7 @@ const corsHeaders = {
 }
 
 const GOOGLE_MAPS_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY')!;
-const client = createClient({});
+const client = new Client({});
 
 serve(async (req) => {
   // Handle CORS preflight requests
