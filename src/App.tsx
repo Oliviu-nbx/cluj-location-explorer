@@ -6,11 +6,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./components/AuthContext";
 import MainLayout from "./layouts/MainLayout";
+import AdminLayout from "./layouts/AdminLayout";
 import HomePage from "./pages/HomePage";
 import CategoryPage from "./pages/CategoryPage";
 import LocationPage from "./pages/LocationPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
+import LocationsPage from "./pages/admin/LocationsPage";
+import CategoriesPage from "./pages/admin/CategoriesPage";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +30,10 @@ const App = () => (
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/category/:categorySlug" element={<CategoryPage />} />
               <Route path="/:categorySlug/:locationSlug" element={<LocationPage />} />
+            </Route>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route path="locations" element={<LocationsPage />} />
+              <Route path="categories" element={<CategoriesPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
