@@ -1,19 +1,26 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { LocationService } from "@/services/LocationService";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, RefreshCw, Webhook } from "lucide-react";
+import { PlusCircle, RefreshCw, Webhook, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { N8nWebhookSetup } from "@/components/admin/N8nWebhookSetup";
 import PlaceInfoManager from "@/components/admin/PlaceInfoManager";
+import { AddLocationForm } from "@/components/admin/AddLocationForm";
+import { EditLocationForm } from "@/components/admin/EditLocationForm";
+import { Location } from "@/types/location";
 
 export default function LocationsPage() {
   const [page] = useState(1);
   const { toast } = useToast();
   const [isWebhookDialogOpen, setIsWebhookDialogOpen] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [isAddLocationOpen, setIsAddLocationOpen] = useState(false);
+  const [locationToEdit, setLocationToEdit] = useState<Location | null>(null);
+  const [isEditLocationOpen, setIsEditLocationOpen] = useState(false);
   
   const { data: locations, isLoading, refetch } = useQuery({
     queryKey: ["admin-locations", page],
@@ -21,10 +28,32 @@ export default function LocationsPage() {
   });
 
   const handleAddLocation = () => {
-    toast({
-      title: "Coming Soon",
-      description: "Manual location addition will be available soon.",
-    });
+    setIsAddLocationOpen(true);
+  };
+
+  const handleEditLocation = (location: Location) => {
+    setLocationToEdit(location);
+    setIsEditLocationOpen(true);
+  };
+
+  const handleDeleteLocation = async (locationId: string) => {
+    if (confirm("Are you sure you want to delete this location?")) {
+      try {
+        await LocationService.deleteLocation(locationId);
+        toast({
+          title: "Success",
+          description: "Location has been deleted successfully",
+        });
+        refetch();
+      } catch (error) {
+        console.error("Error deleting location:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to delete the location",
+        });
+      }
+    }
   };
 
   if (isLoading) {
@@ -86,12 +115,29 @@ export default function LocationsPage() {
                 <TableCell>{location.address}</TableCell>
                 <TableCell>{location.compositeScore ?? location.rating}</TableCell>
                 <TableCell>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => setSelectedLocationId(location.id)}
-                  >
-                    Manage
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setSelectedLocationId(location.id)}
+                    >
+                      Manage
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleEditLocation(location)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDeleteLocation(location.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))
@@ -99,6 +145,48 @@ export default function LocationsPage() {
         </TableBody>
       </Table>
 
+      {/* Add Location Dialog */}
+      <Dialog open={isAddLocationOpen} onOpenChange={setIsAddLocationOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add New Location</DialogTitle>
+          </DialogHeader>
+          <AddLocationForm 
+            onSuccess={() => {
+              setIsAddLocationOpen(false);
+              refetch();
+              toast({
+                title: "Location Added",
+                description: "The new location has been added successfully",
+              });
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Location Dialog */}
+      <Dialog open={isEditLocationOpen} onOpenChange={setIsEditLocationOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Location</DialogTitle>
+          </DialogHeader>
+          {locationToEdit && (
+            <EditLocationForm 
+              location={locationToEdit}
+              onSuccess={() => {
+                setIsEditLocationOpen(false);
+                refetch();
+                toast({
+                  title: "Location Updated",
+                  description: "The location has been updated successfully",
+                });
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Place Info Manager Dialog */}
       <Dialog open={!!selectedLocationId} onOpenChange={() => setSelectedLocationId(null)}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>

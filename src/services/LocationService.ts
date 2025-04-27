@@ -325,6 +325,111 @@ export class LocationService {
       return null;
     }
   }
+
+  // New method to add a location
+  static async addLocation(locationData: Partial<Location>): Promise<Location> {
+    try {
+      // Ensure required fields
+      if (!locationData.name || !locationData.category || !locationData.address || 
+          locationData.latitude === undefined || locationData.longitude === undefined) {
+        throw new Error("Missing required fields");
+      }
+
+      // Generate ID if not provided
+      const id = locationData.id || crypto.randomUUID();
+      
+      // Create a new location object
+      const newLocation: Location = {
+        id,
+        name: locationData.name,
+        slug: locationData.slug || this.generateSlug(locationData.name),
+        category: locationData.category,
+        address: locationData.address,
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+        phone: locationData.phone,
+        website: locationData.website,
+        rating: locationData.rating,
+        priceLevel: locationData.priceLevel,
+        placeId: locationData.placeId || `manual-${Date.now()}`,
+        photos: locationData.photos || [],
+        types: locationData.types || [locationData.category],
+        reviews: locationData.reviews || [],
+        editorialSummary: locationData.editorialSummary,
+        lastUpdated: new Date().toISOString(),
+        openNow: locationData.openNow,
+        userRatingsTotal: locationData.userRatingsTotal,
+        openingHours: locationData.openingHours,
+        compositeScore: locationData.compositeScore || locationData.rating
+      };
+      
+      // In a real application, we would persist this to a database
+      // For now, we'll just add it to our sample locations array
+      this.SAMPLE_LOCATIONS.push(newLocation);
+      
+      // Clear the cache to ensure we fetch the latest data next time
+      CacheService.remove('all_locations');
+      CacheService.remove(`locations_by_category_${newLocation.category}`);
+      
+      return newLocation;
+    } catch (error) {
+      console.error("Error adding location:", error);
+      throw error;
+    }
+  }
+  
+  // Method to update an existing location
+  static async updateLocation(location: Location): Promise<Location> {
+    try {
+      // Find the location index
+      const index = this.SAMPLE_LOCATIONS.findIndex(loc => loc.id === location.id);
+      if (index === -1) {
+        throw new Error(`Location with ID ${location.id} not found`);
+      }
+      
+      // Update the location
+      this.SAMPLE_LOCATIONS[index] = {
+        ...location,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      // Clear relevant caches
+      CacheService.remove('all_locations');
+      CacheService.remove(`locations_by_category_${location.category}`);
+      CacheService.remove(`location_by_slug_${location.slug}`);
+      
+      return this.SAMPLE_LOCATIONS[index];
+    } catch (error) {
+      console.error("Error updating location:", error);
+      throw error;
+    }
+  }
+  
+  // Method to delete a location
+  static async deleteLocation(id: string): Promise<void> {
+    try {
+      // Find the location
+      const index = this.SAMPLE_LOCATIONS.findIndex(loc => loc.id === id);
+      if (index === -1) {
+        throw new Error(`Location with ID ${id} not found`);
+      }
+      
+      // Store category before deletion for cache clearing
+      const category = this.SAMPLE_LOCATIONS[index].category;
+      const slug = this.SAMPLE_LOCATIONS[index].slug;
+      
+      // Remove the location
+      this.SAMPLE_LOCATIONS.splice(index, 1);
+      
+      // Clear relevant caches
+      CacheService.remove('all_locations');
+      CacheService.remove(`locations_by_category_${category}`);
+      CacheService.remove(`location_by_slug_${slug}`);
+    } catch (error) {
+      console.error("Error deleting location:", error);
+      throw error;
+    }
+  }
 };
 
 // Helper function to transform database data to match Location interface
