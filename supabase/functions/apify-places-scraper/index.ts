@@ -94,32 +94,50 @@ Deno.serve(async (req) => {
     const supabaseClient = createSupabaseClient(req)
 
     if (req.method === 'POST') {
-      const { token, actorId, searchParams } = await req.json()
+      let requestData;
+      try {
+        requestData = await req.json();
+      } catch (error) {
+        console.error("Error parsing request JSON:", error);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: "Invalid request format" 
+        }), {
+          status: 200, // Using 200 even for errors, with error details in body
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      
+      const { token, actorId, searchParams } = requestData;
       
       if (!token) {
-        return new Response(JSON.stringify({ error: 'Apify token is required' }), {
-          status: 400,
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Apify token is required' 
+        }), {
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+        });
       }
 
       // Default to Google Places Scraper if no actor specified
-      const actor = actorId || 'apify/google-places-scraper'
+      const actor = actorId || 'apify/google-places-scraper';
       
       // Set default search parameters if not provided
       const params = searchParams || {
         queries: 'restaurants in Cluj-Napoca',
         language: 'en',
         maxCrawledPlaces: 10,
-      }
+      };
 
-      console.log(`Starting Apify scraper with actor: ${actor}`)
-      console.log(`Search parameters: ${JSON.stringify(params)}`)
+      console.log(`Starting Apify scraper with actor: ${actor}`);
+      console.log(`Search parameters: ${JSON.stringify(params)}`);
       
       try {
-        // Start the Apify actor run - changed to GET request structure for compatibility
-        // First, create URL for the actor
-        const apifyBaseUrl = `https://api.apify.com/v2/acts/${actor}/runs`
+        // Use the proper Apify API endpoint
+        const apifyBaseUrl = `https://api.apify.com/v2/acts/${actor}/runs`;
+        
+        console.log(`Calling Apify API at: ${apifyBaseUrl}`);
         
         // Create the run by making a POST request to the Apify API
         const response = await fetch(apifyBaseUrl, {
@@ -129,82 +147,119 @@ Deno.serve(async (req) => {
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ input: params })
-        })
+        });
 
+        const responseText = await response.text();
+        console.log(`Apify API response status: ${response.status}`);
+        console.log(`Apify API response body: ${responseText}`);
+        
+        let runData;
+        try {
+          runData = JSON.parse(responseText);
+        } catch (error) {
+          console.error("Error parsing Apify response:", error);
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: `Invalid response from Apify: ${responseText.substring(0, 200)}` 
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        
         if (!response.ok) {
-          const errorText = await response.text()
-          console.error(`Apify API error: Status ${response.status}, Response: ${errorText}`)
-          throw new Error(`Apify API error: ${response.status} - ${errorText}`)
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: `Apify API error: ${response.status} - ${responseText}`,
+            apifyResponse: runData
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
         }
 
-        const runData = await response.json()
-        const runId = runData.data.id
+        // Check if the expected data structure is present
+        if (!runData.data || !runData.data.id) {
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: 'Invalid response structure from Apify',
+            apifyResponse: runData
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
 
-        console.log(`Started Apify run with ID: ${runId}`)
+        const runId = runData.data.id;
+        console.log(`Started Apify run with ID: ${runId}`);
         
         // Set up background processing to wait for results
         const waitAndProcessResults = async () => {
           try {
             // Wait for the run to finish
-            let isFinished = false
-            let retryCount = 0
-            let runResult
+            let isFinished = false;
+            let retryCount = 0;
+            let runResult;
 
             while (!isFinished && retryCount < 30) {
               // Check run status
               const statusResponse = await fetch(`https://api.apify.com/v2/actor-runs/${runId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
-              })
+              });
               
               if (!statusResponse.ok) {
-                throw new Error(`Failed to check run status: ${statusResponse.statusText}`)
+                console.error(`Failed to check run status: ${statusResponse.status} - ${await statusResponse.text()}`);
+                throw new Error(`Failed to check run status: ${statusResponse.statusText}`);
               }
               
-              const statusData = await statusResponse.json()
-              const status = statusData.data.status
-              console.log(`Run status: ${status}, attempt: ${retryCount + 1}`)
+              const statusData = await statusResponse.json();
+              const status = statusData.data.status;
+              console.log(`Run status: ${status}, attempt: ${retryCount + 1}`);
               
               if (status === 'SUCCEEDED') {
-                isFinished = true
+                isFinished = true;
                 
                 // Get run results
                 const datasetResponse = await fetch(`https://api.apify.com/v2/actor-runs/${runId}/dataset/items`, {
                   headers: { 'Authorization': `Bearer ${token}` }
-                })
+                });
                 
                 if (!datasetResponse.ok) {
-                  throw new Error(`Failed to get dataset: ${datasetResponse.statusText}`)
+                  console.error(`Failed to get dataset: ${datasetResponse.status} - ${await datasetResponse.text()}`);
+                  throw new Error(`Failed to get dataset: ${datasetResponse.statusText}`);
                 }
                 
-                runResult = await datasetResponse.json()
-                console.log(`Retrieved ${runResult.length} results from Apify`)
+                runResult = await datasetResponse.json();
+                console.log(`Retrieved ${runResult.length} results from Apify`);
               } else if (['FAILED', 'ABORTED', 'TIMED-OUT'].includes(status)) {
-                throw new Error(`Run ${runId} ended with status: ${status}`)
+                console.error(`Run ${runId} ended with status: ${status}`);
+                throw new Error(`Run ${runId} ended with status: ${status}`);
               }
               
               if (!isFinished) {
-                retryCount++
+                retryCount++;
                 // Wait 10 seconds before checking again
-                await new Promise(resolve => setTimeout(resolve, 10000))
+                await new Promise(resolve => setTimeout(resolve, 10000));
               }
             }
 
             if (!isFinished) {
-              throw new Error('Run timed out waiting for completion')
+              console.error('Run timed out waiting for completion');
+              throw new Error('Run timed out waiting for completion');
             }
 
             // Process results and store in database
             if (runResult && Array.isArray(runResult)) {
-              const processedLocations = await processApifyResults(runResult, supabaseClient)
-              console.log(`Successfully processed ${processedLocations.length} locations from Apify`)
+              const processedLocations = await processApifyResults(runResult, supabaseClient);
+              console.log(`Successfully processed ${processedLocations.length} locations from Apify`);
             }
           } catch (error) {
-            console.error('Error processing Apify results:', error)
+            console.error('Error processing Apify results:', error);
           }
-        }
+        };
 
         // Start background processing
-        EdgeRuntime.waitUntil(waitAndProcessResults())
+        EdgeRuntime.waitUntil(waitAndProcessResults());
         
         // Return immediate response
         return new Response(JSON.stringify({
@@ -215,25 +270,34 @@ Deno.serve(async (req) => {
         }), {
           status: 202,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+        });
       } catch (apiError) {
         console.error('Error calling Apify API:', apiError);
-        return new Response(JSON.stringify({ error: apiError.message }), {
-          status: 500,
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: apiError.message 
+        }), {
+          status: 200, // Using 200 even for errors
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
     }
 
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: 'Method not allowed' 
+    }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    });
   } catch (error) {
-    console.error('Error handling request:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
+    console.error('Error handling request:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.message 
+    }), {
+      status: 200, // Always return 200 with error in body
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    })
+    });
   }
-})
+});

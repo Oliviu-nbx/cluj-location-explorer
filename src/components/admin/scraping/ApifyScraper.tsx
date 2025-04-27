@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ export const ApifyScraper = ({ onStatusUpdate }: ApifyScraperProps = {}) => {
   const [apifyMaxPlaces, setApifyMaxPlaces] = useState("10");
   const [apifyActor, setApifyActor] = useState("apify/google-places-scraper");
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   const updateStatus = (message: string) => {
     if (onStatusUpdate) {
@@ -32,6 +34,7 @@ export const ApifyScraper = ({ onStatusUpdate }: ApifyScraperProps = {}) => {
   const handleApifyScraping = async () => {
     setLoading(true);
     setError(null);
+    setDebugInfo(null);
     updateStatus("Preparing Apify scraper...");
     
     try {
@@ -63,7 +66,17 @@ export const ApifyScraper = ({ onStatusUpdate }: ApifyScraperProps = {}) => {
 
       console.log("Apify response:", response);
 
+      // Check for error in the response body (even if status is 200)
+      if (response.data && response.data.success === false) {
+        // Store the debug info for developer inspection
+        setDebugInfo(response.data);
+        throw new Error(response.data.error || "Unknown error from Apify scraper");
+      }
+      
+      // Check for error in the error property
       if (response.error) {
+        // Store the debug info for developer inspection
+        setDebugInfo(response.error);
         throw new Error(response.error.message || "Unknown error from Apify scraper");
       }
 
@@ -103,6 +116,15 @@ export const ApifyScraper = ({ onStatusUpdate }: ApifyScraperProps = {}) => {
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
+        )}
+
+        {debugInfo && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-md mb-4">
+            <h4 className="font-semibold mb-2">Debug Information:</h4>
+            <pre className="text-xs overflow-auto max-h-40">
+              {JSON.stringify(debugInfo, null, 2)}
+            </pre>
+          </div>
         )}
 
         <div className="space-y-2">
