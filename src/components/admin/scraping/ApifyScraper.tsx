@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,17 +8,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Check, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export const ApifyScraper = () => {
+export interface ApifyScraperProps {
+  onStatusUpdate?: (message: string) => void;
+}
+
+export const ApifyScraper = ({ onStatusUpdate }: ApifyScraperProps = {}) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [apifyToken, setApifyToken] = useState("");
   const [apifyQuery, setApifyQuery] = useState("restaurants in Cluj-Napoca");
   const [apifyMaxPlaces, setApifyMaxPlaces] = useState("10");
   const [apifyActor, setApifyActor] = useState("apify/google-places-scraper");
+  const [error, setError] = useState<string | null>(null);
+
+  const updateStatus = (message: string) => {
+    if (onStatusUpdate) {
+      onStatusUpdate(message);
+    }
+  };
 
   const handleApifyScraping = async () => {
     setLoading(true);
+    setError(null);
+    updateStatus("Preparing Apify scraper...");
     
     try {
       // Validate inputs
@@ -38,6 +51,7 @@ export const ApifyScraper = () => {
       };
 
       console.log("Starting Apify scraper with params:", searchParams);
+      updateStatus(`Starting Apify scraping for "${apifyQuery}"...`);
       
       const response = await supabase.functions.invoke("apify-places-scraper", {
         body: {
@@ -50,15 +64,18 @@ export const ApifyScraper = () => {
       console.log("Apify response:", response);
 
       if (response.error) {
-        throw new Error(response.error);
+        throw new Error(response.error.message || "Unknown error from Apify scraper");
       }
 
+      updateStatus(`Apify job started with run ID: ${response.data?.runId || 'unknown'}`);
+      
       toast({
         title: "Apify Scraping Started",
-        description: "The scraping job has been started. Results will be processed in the background.",
+        description: "The scraping job has been started. Results will be processed in the background. This might take a few minutes.",
       });
     } catch (error) {
       console.error("Error starting Apify scraper:", error);
+      setError(error.message || "An error occurred while starting the Apify scraper.");
       toast({
         variant: "destructive",
         title: "Scraping Failed",
@@ -66,6 +83,10 @@ export const ApifyScraper = () => {
       });
     } finally {
       setLoading(false);
+      // Keep the status message for Apify since it's a background process
+      if (!error) {
+        setTimeout(() => updateStatus(""), 5000);
+      }
     }
   };
 
@@ -78,6 +99,12 @@ export const ApifyScraper = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="apifyToken">Apify API Token</Label>
           <Input
@@ -87,6 +114,9 @@ export const ApifyScraper = () => {
             value={apifyToken}
             onChange={(e) => setApifyToken(e.target.value)}
           />
+          <p className="text-xs text-muted-foreground">
+            Get your Apify token from the <a href="https://console.apify.com/account/integrations" target="_blank" rel="noopener noreferrer" className="underline">Apify Console</a>.
+          </p>
         </div>
         
         <div className="space-y-2">

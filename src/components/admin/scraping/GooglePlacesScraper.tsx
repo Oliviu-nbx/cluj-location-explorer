@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Check, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export interface GooglePlacesScraperProps {
   onStatusUpdate: (message: string) => void;
@@ -19,9 +20,11 @@ export const GooglePlacesScraper = ({ onStatusUpdate }: GooglePlacesScraperProps
   const [googleQuery, setGoogleQuery] = useState("");
   const [googleRadius, setGoogleRadius] = useState("1000");
   const [googleType, setGoogleType] = useState("restaurant");
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
 
   const handleGoogleSearch = async () => {
     setLoading(true);
+    setApiKeyMissing(false);
     onStatusUpdate("Geocoding location...");
     
     try {
@@ -41,6 +44,16 @@ export const GooglePlacesScraper = ({ onStatusUpdate }: GooglePlacesScraperProps
       });
 
       console.log("Geocode response:", geocodeResponse);
+
+      // Handle API key error specifically
+      if (geocodeResponse.error?.message?.includes("Google Maps API key is not configured")) {
+        setApiKeyMissing(true);
+        throw new Error("Google Maps API key is not properly configured in Supabase");
+      }
+
+      if (geocodeResponse.error) {
+        throw new Error(geocodeResponse.error.message || "Error during geocoding");
+      }
 
       if (!geocodeResponse.data || 
           !geocodeResponse.data.results || 
@@ -64,6 +77,10 @@ export const GooglePlacesScraper = ({ onStatusUpdate }: GooglePlacesScraperProps
       });
 
       console.log("Places response:", placesResponse);
+
+      if (placesResponse.error) {
+        throw new Error(placesResponse.error.message || "Error searching for places");
+      }
 
       if (!placesResponse.data || 
           !placesResponse.data.results || 
@@ -89,6 +106,11 @@ export const GooglePlacesScraper = ({ onStatusUpdate }: GooglePlacesScraperProps
               },
             },
           });
+
+          if (detailsResponse.error) {
+            console.warn(`Error getting details for place ${place.name}:`, detailsResponse.error);
+            continue;
+          }
 
           if (!detailsResponse.data || !detailsResponse.data.result) {
             console.warn(`No details found for place: ${place.name}`);
@@ -155,6 +177,14 @@ export const GooglePlacesScraper = ({ onStatusUpdate }: GooglePlacesScraperProps
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {apiKeyMissing && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>
+              Google Maps API key is not configured. Please add the GOOGLE_MAPS_API_KEY secret in your Supabase project settings.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="googleQuery">Location</Label>
           <Input

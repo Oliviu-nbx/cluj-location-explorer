@@ -3,16 +3,33 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { N8nWebhookSetup } from "@/components/admin/N8nWebhookSetup";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { GooglePlacesScraper } from "@/components/admin/scraping/GooglePlacesScraper";
 import { ApifyScraper } from "@/components/admin/scraping/ApifyScraper";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const ScrapingPage = () => {
   const [statusMessage, setStatusMessage] = useState("");
+  const [error, setError] = useState<string | null>(null);
   
+  const handleStatusUpdate = (message: string) => {
+    setStatusMessage(message);
+    // Clear any previous errors when a new operation starts
+    if (message && error) {
+      setError(null);
+    }
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <h1 className="text-3xl font-bold">Location Scraping Tools</h1>
+      
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       
       {statusMessage && (
         <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded flex items-center">
@@ -29,11 +46,11 @@ const ScrapingPage = () => {
         </TabsList>
 
         <TabsContent value="google">
-          <GooglePlacesScraper onStatusUpdate={setStatusMessage} />
+          <GooglePlacesScraper onStatusUpdate={handleStatusUpdate} />
         </TabsContent>
 
         <TabsContent value="apify">
-          <ApifyScraper />
+          <ApifyScraper onStatusUpdate={handleStatusUpdate} />
         </TabsContent>
 
         <TabsContent value="n8n">

@@ -115,106 +115,114 @@ Deno.serve(async (req) => {
 
       console.log(`Starting Apify scraper with actor: ${actor}`)
       console.log(`Search parameters: ${JSON.stringify(params)}`)
-
-      // Start the Apify actor run - using correct endpoint URL
-      const apifyUrl = `https://api.apify.com/v2/actor-runs`
-      const response = await fetch(apifyUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          actorId: actor,
-          input: params 
-        })
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error(`Apify API error: Status ${response.status}, Response: ${errorText}`)
-        throw new Error(`Apify API error: ${response.status} - ${errorText}`)
-      }
-
-      const runData = await response.json()
-      const runId = runData.data.id
-
-      console.log(`Started Apify run with ID: ${runId}`)
       
-      // Set up background processing to wait for results
-      const waitAndProcessResults = async () => {
-        try {
-          // Wait for the run to finish
-          let isFinished = false
-          let retryCount = 0
-          let runResult
+      try {
+        // Start the Apify actor run - changed to GET request structure for compatibility
+        // First, create URL for the actor
+        const apifyBaseUrl = `https://api.apify.com/v2/acts/${actor}/runs`
+        
+        // Create the run by making a POST request to the Apify API
+        const response = await fetch(apifyBaseUrl, {
+          method: 'POST', 
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ input: params })
+        })
 
-          while (!isFinished && retryCount < 30) {
-            // Check run status
-            const statusResponse = await fetch(`https://api.apify.com/v2/actor-runs/${runId}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            })
-            
-            if (!statusResponse.ok) {
-              throw new Error(`Failed to check run status: ${statusResponse.statusText}`)
-            }
-            
-            const statusData = await statusResponse.json()
-            const status = statusData.data.status
-            console.log(`Run status: ${status}, attempt: ${retryCount + 1}`)
-            
-            if (status === 'SUCCEEDED') {
-              isFinished = true
-              
-              // Get run results
-              const datasetResponse = await fetch(`https://api.apify.com/v2/actor-runs/${runId}/dataset/items`, {
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error(`Apify API error: Status ${response.status}, Response: ${errorText}`)
+          throw new Error(`Apify API error: ${response.status} - ${errorText}`)
+        }
+
+        const runData = await response.json()
+        const runId = runData.data.id
+
+        console.log(`Started Apify run with ID: ${runId}`)
+        
+        // Set up background processing to wait for results
+        const waitAndProcessResults = async () => {
+          try {
+            // Wait for the run to finish
+            let isFinished = false
+            let retryCount = 0
+            let runResult
+
+            while (!isFinished && retryCount < 30) {
+              // Check run status
+              const statusResponse = await fetch(`https://api.apify.com/v2/actor-runs/${runId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
               })
               
-              if (!datasetResponse.ok) {
-                throw new Error(`Failed to get dataset: ${datasetResponse.statusText}`)
+              if (!statusResponse.ok) {
+                throw new Error(`Failed to check run status: ${statusResponse.statusText}`)
               }
               
-              runResult = await datasetResponse.json()
-              console.log(`Retrieved ${runResult.length} results from Apify`)
-            } else if (['FAILED', 'ABORTED', 'TIMED-OUT'].includes(status)) {
-              throw new Error(`Run ${runId} ended with status: ${status}`)
+              const statusData = await statusResponse.json()
+              const status = statusData.data.status
+              console.log(`Run status: ${status}, attempt: ${retryCount + 1}`)
+              
+              if (status === 'SUCCEEDED') {
+                isFinished = true
+                
+                // Get run results
+                const datasetResponse = await fetch(`https://api.apify.com/v2/actor-runs/${runId}/dataset/items`, {
+                  headers: { 'Authorization': `Bearer ${token}` }
+                })
+                
+                if (!datasetResponse.ok) {
+                  throw new Error(`Failed to get dataset: ${datasetResponse.statusText}`)
+                }
+                
+                runResult = await datasetResponse.json()
+                console.log(`Retrieved ${runResult.length} results from Apify`)
+              } else if (['FAILED', 'ABORTED', 'TIMED-OUT'].includes(status)) {
+                throw new Error(`Run ${runId} ended with status: ${status}`)
+              }
+              
+              if (!isFinished) {
+                retryCount++
+                // Wait 10 seconds before checking again
+                await new Promise(resolve => setTimeout(resolve, 10000))
+              }
             }
-            
+
             if (!isFinished) {
-              retryCount++
-              // Wait 10 seconds before checking again
-              await new Promise(resolve => setTimeout(resolve, 10000))
+              throw new Error('Run timed out waiting for completion')
             }
-          }
 
-          if (!isFinished) {
-            throw new Error('Run timed out waiting for completion')
+            // Process results and store in database
+            if (runResult && Array.isArray(runResult)) {
+              const processedLocations = await processApifyResults(runResult, supabaseClient)
+              console.log(`Successfully processed ${processedLocations.length} locations from Apify`)
+            }
+          } catch (error) {
+            console.error('Error processing Apify results:', error)
           }
-
-          // Process results and store in database
-          if (runResult && Array.isArray(runResult)) {
-            const processedLocations = await processApifyResults(runResult, supabaseClient)
-            console.log(`Successfully processed ${processedLocations.length} locations from Apify`)
-          }
-        } catch (error) {
-          console.error('Error processing Apify results:', error)
         }
-      }
 
-      // Start background processing
-      EdgeRuntime.waitUntil(waitAndProcessResults())
-      
-      // Return immediate response
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Apify job started successfully',
-        runId,
-        status: 'PENDING',
-      }), {
-        status: 202,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+        // Start background processing
+        EdgeRuntime.waitUntil(waitAndProcessResults())
+        
+        // Return immediate response
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Apify job started successfully',
+          runId,
+          status: 'PENDING',
+        }), {
+          status: 202,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      } catch (apiError) {
+        console.error('Error calling Apify API:', apiError);
+        return new Response(JSON.stringify({ error: apiError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
