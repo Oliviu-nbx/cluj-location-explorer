@@ -109,6 +109,33 @@ export const LocationService = {
     
     // Transform data to match Location interface
     return (data || []).map(item => transformLocationData(item));
+  },
+  
+  // New method to add locations from n8n
+  addLocationFromN8n: async (locationData: any): Promise<Location | null> => {
+    try {
+      // Ensure we have all required fields
+      const requiredFields = ['name', 'category_id', 'slug', 'address', 'latitude', 'longitude', 'place_id'];
+      for (const field of requiredFields) {
+        if (!locationData[field]) {
+          throw new Error(`Missing required field: ${field}`);
+        }
+      }
+      
+      // Insert the location into the database
+      const { data, error } = await supabase
+        .from('locations')
+        .insert([locationData])
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      return transformLocationData(data);
+    } catch (error) {
+      console.error("Error adding location from n8n:", error);
+      return null;
+    }
   }
 };
 

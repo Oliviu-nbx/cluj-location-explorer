@@ -3,14 +3,29 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { LocationService } from "@/services/LocationService";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { PlusCircle, RefreshCw, Webhook } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { N8nWebhookSetup } from "@/components/admin/N8nWebhookSetup";
 
 export default function LocationsPage() {
   const [page] = useState(1);
-
-  const { data: locations, isLoading } = useQuery({
+  const { toast } = useToast();
+  const [isWebhookDialogOpen, setIsWebhookDialogOpen] = useState(false);
+  
+  const { data: locations, isLoading, refetch } = useQuery({
     queryKey: ["admin-locations", page],
     queryFn: () => LocationService.getAllLocations(),
   });
+
+  const handleAddLocation = () => {
+    // This will be implemented in a future step for manual location addition
+    toast({
+      title: "Coming Soon",
+      description: "Manual location addition will be available soon.",
+    });
+  };
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -18,8 +33,32 @@ export default function LocationsPage() {
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Manage Locations</h1>
+        <div className="space-x-2">
+          <Button variant="outline" onClick={() => refetch()} size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button onClick={handleAddLocation} size="sm">
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Add Location
+          </Button>
+          <Dialog open={isWebhookDialogOpen} onOpenChange={setIsWebhookDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="secondary" size="sm">
+                <Webhook className="h-4 w-4 mr-2" />
+                n8n Integration
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>n8n.io Webhook Integration</DialogTitle>
+              </DialogHeader>
+              <N8nWebhookSetup onWebhookTested={() => setIsWebhookDialogOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Table>
@@ -33,15 +72,23 @@ export default function LocationsPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {locations?.map((location) => (
-            <TableRow key={location.id}>
-              <TableCell>{location.name}</TableCell>
-              <TableCell>{location.category}</TableCell>
-              <TableCell>{location.address}</TableCell>
-              <TableCell>{location.rating}</TableCell>
-              <TableCell>Edit</TableCell>
+          {locations?.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                No locations found. Add some manually or use n8n integration.
+              </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            locations?.map((location) => (
+              <TableRow key={location.id}>
+                <TableCell>{location.name}</TableCell>
+                <TableCell>{location.category}</TableCell>
+                <TableCell>{location.address}</TableCell>
+                <TableCell>{location.rating}</TableCell>
+                <TableCell>Edit</TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>
