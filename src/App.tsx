@@ -1,4 +1,5 @@
-import { QueryClientProvider } from "@tanstack/react-query";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -11,6 +12,7 @@ import CategoryPage from "./pages/CategoryPage";
 import LocationPage from "./pages/LocationPage";
 import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
+import ProfilePage from "./pages/ProfilePage";
 import LocationsPage from "./pages/admin/LocationsPage";
 import CategoriesPage from "./pages/admin/CategoriesPage";
 import ScrapingPage from "./pages/admin/ScrapingPage";
