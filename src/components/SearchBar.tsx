@@ -3,6 +3,7 @@ import React from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { LocationCategory, CATEGORY_LABELS } from "@/types/location";
+import AnalyticsService from "@/services/AnalyticsService";
 import {
   Select,
   SelectContent,
@@ -18,6 +19,19 @@ interface SearchBarProps {
 }
 
 const SearchBar = ({ onSearch, onCategoryChange, selectedCategory }: SearchBarProps) => {
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    onSearch(query);
+    if (query.length > 2) {
+      AnalyticsService.trackEvent('Search', 'query', query);
+    }
+  };
+
+  const handleCategoryChange = (value: LocationCategory | '') => {
+    onCategoryChange(value);
+    AnalyticsService.trackEvent('Category', 'select', value || 'all');
+  };
+
   return (
     <div className="flex gap-4 w-full max-w-3xl mx-auto mb-8">
       <div className="relative flex-1">
@@ -26,15 +40,19 @@ const SearchBar = ({ onSearch, onCategoryChange, selectedCategory }: SearchBarPr
           type="text"
           placeholder="Search locations..."
           className="pl-10"
-          onChange={(e) => onSearch(e.target.value)}
+          onChange={handleSearch}
+          data-analytics="search"
         />
       </div>
-      <Select value={selectedCategory} onValueChange={(value) => onCategoryChange(value as LocationCategory | '')}>
-        <SelectTrigger className="w-[180px]">
+      <Select 
+        value={selectedCategory} 
+        onValueChange={handleCategoryChange}
+      >
+        <SelectTrigger className="w-[180px]" data-analytics="category">
           <SelectValue placeholder="All Categories" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all-categories">All Categories</SelectItem>
+          <SelectItem value="">All Categories</SelectItem>
           {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
             <SelectItem key={key} value={key}>{label}</SelectItem>
           ))}
