@@ -19,12 +19,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check admin status directly from the database to avoid RLS recursion
-  const checkAdminStatus = async (userId: string) => {
+  // Check admin status using our non-recursive RPC function
+  const checkAdminStatus = async () => {
     try {
-      // Use a direct query instead of using the profile ID
+      // Use the admin_check RPC function we created in the database
       const { data, error } = await supabase
-        .rpc('is_admin')
+        .rpc('admin_check')
         .single();
       
       if (error) {
@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           // Safely check admin status after the state is updated
           // Use setTimeout to avoid potential recursion issues
           setTimeout(async () => {
-            const adminStatus = await checkAdminStatus(currentSession.user.id);
+            const adminStatus = await checkAdminStatus();
             console.log('Admin status check result:', adminStatus);
             setIsAdmin(adminStatus);
             setIsLoading(false);
@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(initialSession?.user ?? null);
       
       if (initialSession?.user) {
-        const adminStatus = await checkAdminStatus(initialSession.user.id);
+        const adminStatus = await checkAdminStatus();
         console.log('Initial admin status:', adminStatus);
         setIsAdmin(adminStatus);
       }
