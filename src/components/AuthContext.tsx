@@ -34,6 +34,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           setIsAdmin(data?.is_admin ?? false);
           console.log('Admin status updated:', data?.is_admin);
+        } else {
+          setIsAdmin(false);
         }
       }
     );
