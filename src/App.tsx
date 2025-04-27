@@ -14,6 +14,9 @@ import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import LocationsPage from "./pages/admin/LocationsPage";
 import CategoriesPage from "./pages/admin/CategoriesPage";
+import SitemapIndexPage from "./pages/sitemap/SitemapIndexPage";
+import LocationSitemapPage from "./pages/sitemap/LocationSitemapPage";
+import PagesSitemapPage from "./pages/sitemap/PagesSitemapPage";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +38,12 @@ const App = () => (
               <Route path="locations" element={<LocationsPage />} />
               <Route path="categories" element={<CategoriesPage />} />
             </Route>
+            
+            {/* Sitemap routes */}
+            <Route path="/sitemap.xml" element={<SitemapIndexPage />} />
+            <Route path="/sitemap-pages.xml" element={<PagesSitemapPage />} />
+            <Route path="/sitemap-:categorySlug.xml" element={<LocationSitemapPage />} />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

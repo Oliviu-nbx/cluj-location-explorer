@@ -44,6 +44,8 @@ const CategoryPage = () => {
       <SEO 
         title={title}
         description={description}
+        baseUrl="https://wcompass.ro"
+        canonicalUrl={categorySlug ? `/category/${categorySlug}` : undefined}
         type="website"
       />
       

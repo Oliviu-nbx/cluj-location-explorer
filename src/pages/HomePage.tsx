@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { LocationService } from "@/services/LocationService";
 import { Location, LocationCategory } from "@/types/location";
@@ -53,13 +52,11 @@ const HomePage = () => {
     setFilteredLocations(filtered);
   }, [selectedCategory, searchQuery, allLocations]);
 
-  // Handle category selection from search bar
-  const handleCategoryChange = (category: LocationCategory | '') => {
-    // If "all-categories" is selected, treat it as empty string (show all)
+  const handleCategoryChange = (category: LocationCategory | 'all-categories') => {
     if (category === 'all-categories') {
       setSelectedCategory('');
     } else {
-      setSelectedCategory(category);
+      setSelectedCategory(category as LocationCategory);
     }
   };
 
@@ -67,7 +64,9 @@ const HomePage = () => {
     <>
       <SEO 
         title="Discover Cluj-Napoca - Your Ultimate City Guide"
-        description="Explore the best hotels, restaurants, bars, clubs, and tourist attractions in Cluj-Napoca with Cluj Compass - your comprehensive guide to the heart of Transylvania."
+        description="Explore the best hotels, restaurants, bars, clubs, and tourist attractions in Cluj-Napoca with WCompass - your comprehensive guide to the heart of Transylvania."
+        baseUrl="https://wcompass.ro"
+        canonicalUrl="/"
       />
       
       <section className="bg-gradient-to-r from-primary to-accent text-white py-16 mb-8">
@@ -137,7 +136,6 @@ const HomePage = () => {
           </TabsContent>
         </Tabs>
         
-        {/* Featured sections for each category */}
         {Object.entries(CATEGORY_LABELS).map(([category, label]) => {
           const locations = allLocations.filter(loc => loc.category === category);
           if (!locations || locations.length === 0) return null;

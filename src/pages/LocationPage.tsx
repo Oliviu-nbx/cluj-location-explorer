@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { LocationService } from "@/services/LocationService";
@@ -61,6 +60,26 @@ const LocationPage = () => {
     fetchLocationData();
   }, [categorySlug, locationSlug]);
   
+  if (location) {
+    return (
+      <>
+        <SEO 
+          location={location} 
+          baseUrl="https://wcompass.ro"
+          canonicalUrl={`/${location.category}/${location.slug}`}
+          type="website"
+        />
+        
+        <div className="container my-8">
+          <LocationDetails 
+            location={location} 
+            relatedLocations={relatedLocations} 
+          />
+        </div>
+      </>
+    );
+  }
+  
   if (loading) {
     return (
       <div className="container my-8">
@@ -86,16 +105,11 @@ const LocationPage = () => {
   }
   
   return (
-    <>
-      <SEO location={location} />
-      
-      <div className="container my-8">
-        <LocationDetails 
-          location={location} 
-          relatedLocations={relatedLocations} 
-        />
+    <div className="container my-8">
+      <div className="text-center py-16">
+        <p className="text-lg">Loading location details...</p>
       </div>
-    </>
+    </div>
   );
 };
 
