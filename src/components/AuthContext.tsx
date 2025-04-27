@@ -19,16 +19,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check admin status safely using a direct query
+  // Check admin status directly from the database to avoid RLS recursion
   const checkAdminStatus = async (userId: string) => {
     try {
-      // Using a simple approach that avoids RLS recursion
-      // Note: This requires proper RLS policies to be set up
+      // Use a direct query instead of using the profile ID
       const { data, error } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', userId)
-        .limit(1)
+        .rpc('is_admin')
         .single();
       
       if (error) {
@@ -36,7 +32,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
       
-      return data?.is_admin === true;
+      return data === true;
     } catch (err) {
       console.error('Exception in admin check:', err);
       return false;
@@ -56,13 +52,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          // Safely check admin status after a small delay
+          // Safely check admin status after the state is updated
+          // Use setTimeout to avoid potential recursion issues
           setTimeout(async () => {
             const adminStatus = await checkAdminStatus(currentSession.user.id);
             console.log('Admin status check result:', adminStatus);
             setIsAdmin(adminStatus);
             setIsLoading(false);
-          }, 0);
+          }, 100);
         } else {
           setIsAdmin(false);
           setIsLoading(false);
