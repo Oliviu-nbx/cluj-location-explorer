@@ -16,9 +16,10 @@ interface SearchBarProps {
   onSearch: (query: string) => void;
   onCategoryChange: (category: LocationCategory | 'all') => void;
   selectedCategory: LocationCategory | 'all';
+  className?: string;
 }
 
-const SearchBar = ({ onSearch, onCategoryChange, selectedCategory }: SearchBarProps) => {
+const SearchBar = ({ onSearch, onCategoryChange, selectedCategory, className }: SearchBarProps) => {
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     onSearch(query);
@@ -33,7 +34,7 @@ const SearchBar = ({ onSearch, onCategoryChange, selectedCategory }: SearchBarPr
   };
 
   return (
-    <div className="flex gap-4 w-full max-w-3xl mx-auto mb-8">
+    <div className={`flex gap-4 w-full max-w-3xl mx-auto mb-8 ${className || ''}`}>
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
         <Input

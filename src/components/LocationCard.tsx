@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Bookmark } from "lucide-react";
+import { Star, Bookmark, MapPin, ChevronRight } from "lucide-react";
 import { Location } from "@/types/location";
 import { FavoritesService } from "@/services/FavoritesService";
 import { useAuth } from "@/components/AuthContext";
@@ -93,7 +93,7 @@ const LocationCard = ({ location }: LocationCardProps) => {
             </div>
           )}
           {location.openNow !== undefined && (
-            <Badge variant={location.openNow ? "success" : "destructive"} className="ml-auto">
+            <Badge variant={location.openNow ? "secondary" : "destructive"} className={`ml-auto ${location.openNow ? 'bg-green-100 text-green-800' : ''}`}>
               {location.openNow ? 'Open Now' : 'Closed'}
             </Badge>
           )}
