@@ -1,10 +1,13 @@
-
+import { useState, useEffect } from "react";
 import { Star, Phone, Globe, Clock, MapPin } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Location } from "@/types/location";
+import { PlaceInfo } from "@/types/place-info";
 import MapView from "./MapView";
+import PlaceAggregatedInfo from "./PlaceAggregatedInfo";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LocationDetailsProps {
   location: Location;
@@ -12,6 +15,35 @@ interface LocationDetailsProps {
 }
 
 const LocationDetails = ({ location, relatedLocations = [] }: LocationDetailsProps) => {
+  const [placeInfo, setPlaceInfo] = useState<PlaceInfo[]>([]);
+
+  useEffect(() => {
+    const fetchPlaceInfo = async () => {
+      const { data, error } = await supabase
+        .from('place_info')
+        .select('*')
+        .eq('location_id', location.id);
+      
+      if (!error && data) {
+        setPlaceInfo(data.map(info => ({
+          id: info.id,
+          locationId: info.location_id,
+          source: info.source,
+          rating: info.rating,
+          reviewCount: info.review_count,
+          priceLevel: info.price_level,
+          amenities: info.amenities || [],
+          checkInTime: info.check_in_time,
+          checkOutTime: info.check_out_time,
+          neighborhood: info.neighborhood,
+          updatedAt: info.updated_at
+        })));
+      }
+    };
+
+    fetchPlaceInfo();
+  }, [location.id]);
+
   const imageSrc = `https://source.unsplash.com/random/1200x600/?${location.category.replace('_', '-')}`;
   
   // Format price level
@@ -45,6 +77,7 @@ const LocationDetails = ({ location, relatedLocations = [] }: LocationDetailsPro
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="reviews">Reviews</TabsTrigger>
               <TabsTrigger value="photos">Photos</TabsTrigger>
+              <TabsTrigger value="sources">Sources</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-6">
@@ -172,6 +205,17 @@ const LocationDetails = ({ location, relatedLocations = [] }: LocationDetailsPro
                   className="w-full h-48 object-cover rounded-lg"
                 />
               </div>
+            </TabsContent>
+
+            <TabsContent value="sources" className="mt-6">
+              {placeInfo.length > 0 ? (
+                <PlaceAggregatedInfo 
+                  placeInfo={placeInfo} 
+                  compositeScore={location.compositeScore || 0} 
+                />
+              ) : (
+                <p className="text-muted-foreground">No additional source information available.</p>
+              )}
             </TabsContent>
           </Tabs>
         </div>

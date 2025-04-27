@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { LocationService } from "@/services/LocationService";
@@ -8,11 +7,13 @@ import { PlusCircle, RefreshCw, Webhook } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { N8nWebhookSetup } from "@/components/admin/N8nWebhookSetup";
+import PlaceInfoManager from "@/components/admin/PlaceInfoManager";
 
 export default function LocationsPage() {
   const [page] = useState(1);
   const { toast } = useToast();
   const [isWebhookDialogOpen, setIsWebhookDialogOpen] = useState(false);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   
   const { data: locations, isLoading, refetch } = useQuery({
     queryKey: ["admin-locations", page],
@@ -20,7 +21,6 @@ export default function LocationsPage() {
   });
 
   const handleAddLocation = () => {
-    // This will be implemented in a future step for manual location addition
     toast({
       title: "Coming Soon",
       description: "Manual location addition will be available soon.",
@@ -84,13 +84,31 @@ export default function LocationsPage() {
                 <TableCell>{location.name}</TableCell>
                 <TableCell>{location.category}</TableCell>
                 <TableCell>{location.address}</TableCell>
-                <TableCell>{location.rating}</TableCell>
-                <TableCell>Edit</TableCell>
+                <TableCell>{location.compositeScore || location.rating}</TableCell>
+                <TableCell>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => setSelectedLocationId(location.id)}
+                  >
+                    Manage
+                  </Button>
+                </TableCell>
               </TableRow>
             ))
           )}
         </TableBody>
       </Table>
+
+      <Dialog open={!!selectedLocationId} onOpenChange={() => setSelectedLocationId(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Manage Place Information</DialogTitle>
+          </DialogHeader>
+          {selectedLocationId && (
+            <PlaceInfoManager locationId={selectedLocationId} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

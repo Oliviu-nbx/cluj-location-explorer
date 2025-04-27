@@ -122,6 +122,7 @@ export type Database = {
         Row: {
           address: string
           category_id: string
+          composite_score: number | null
           created_at: string
           editorial_summary: string | null
           featured: boolean | null
@@ -142,6 +143,7 @@ export type Database = {
         Insert: {
           address: string
           category_id: string
+          composite_score?: number | null
           created_at?: string
           editorial_summary?: string | null
           featured?: boolean | null
@@ -162,6 +164,7 @@ export type Database = {
         Update: {
           address?: string
           category_id?: string
+          composite_score?: number | null
           created_at?: string
           editorial_summary?: string | null
           featured?: boolean | null
@@ -185,6 +188,56 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      place_info: {
+        Row: {
+          amenities: string[] | null
+          check_in_time: string | null
+          check_out_time: string | null
+          id: string
+          location_id: string
+          neighborhood: string | null
+          price_level: number | null
+          rating: number | null
+          review_count: number | null
+          source: string
+          updated_at: string | null
+        }
+        Insert: {
+          amenities?: string[] | null
+          check_in_time?: string | null
+          check_out_time?: string | null
+          id?: string
+          location_id: string
+          neighborhood?: string | null
+          price_level?: number | null
+          rating?: number | null
+          review_count?: number | null
+          source: string
+          updated_at?: string | null
+        }
+        Update: {
+          amenities?: string[] | null
+          check_in_time?: string | null
+          check_out_time?: string | null
+          id?: string
+          location_id?: string
+          neighborhood?: string | null
+          price_level?: number | null
+          rating?: number | null
+          review_count?: number | null
+          source?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "place_info_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
         ]
