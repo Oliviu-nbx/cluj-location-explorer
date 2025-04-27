@@ -1,18 +1,21 @@
-
 import { useEffect, useState } from "react";
 import { LocationService } from "@/services/LocationService";
-import { Location, LocationCategory, CATEGORY_LABELS } from "@/types/location";
+import { Location, LocationCategory } from "@/types/location";
 import LocationsGrid from "@/components/LocationsGrid";
 import MapView from "@/components/MapView";
+import SearchBar from "@/components/SearchBar";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CATEGORY_LABELS } from "@/types/location";
 
 const HomePage = () => {
   const [allLocations, setAllLocations] = useState<Location[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<LocationCategory | "all">("all");
+  const [filteredLocations, setFilteredLocations] = useState<Location[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<LocationCategory | ''>('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -20,6 +23,7 @@ const HomePage = () => {
       try {
         const locations = await LocationService.getAllLocations();
         setAllLocations(locations);
+        setFilteredLocations(locations);
       } catch (error) {
         console.error("Error fetching locations:", error);
       } finally {
@@ -30,17 +34,24 @@ const HomePage = () => {
     fetchLocations();
   }, []);
   
-  // Filter locations by selected category
-  const displayedLocations = selectedCategory === "all" 
-    ? allLocations 
-    : allLocations.filter(loc => loc.category === selectedCategory);
-  
-  // Group locations by category for featured sections
-  const locationsByCategory = Object.keys(CATEGORY_LABELS).reduce((acc, category) => {
-    acc[category as LocationCategory] = allLocations.filter(loc => loc.category === category);
-    return acc;
-  }, {} as Record<LocationCategory, Location[]>);
-  
+  useEffect(() => {
+    let filtered = allLocations;
+    
+    if (selectedCategory) {
+      filtered = filtered.filter(loc => loc.category === selectedCategory);
+    }
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(loc => 
+        loc.name.toLowerCase().includes(query) ||
+        loc.address.toLowerCase().includes(query)
+      );
+    }
+    
+    setFilteredLocations(filtered);
+  }, [selectedCategory, searchQuery, allLocations]);
+
   return (
     <>
       <SEO 
@@ -62,6 +73,12 @@ const HomePage = () => {
       </section>
       
       <div className="container">
+        <SearchBar
+          onSearch={setSearchQuery}
+          onCategoryChange={setSelectedCategory}
+          selectedCategory={selectedCategory}
+        />
+        
         <Tabs defaultValue="list" className="mb-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-display font-bold">Explore Places</h2>
@@ -96,14 +113,14 @@ const HomePage = () => {
               <div className="text-center py-8">Loading locations...</div>
             ) : (
               <LocationsGrid
-                locations={displayedLocations}
+                locations={filteredLocations}
               />
             )}
           </TabsContent>
           
           <TabsContent value="map">
             <MapView 
-              locations={displayedLocations}
+              locations={filteredLocations}
               height="600px"
             />
           </TabsContent>
@@ -111,7 +128,7 @@ const HomePage = () => {
         
         {/* Featured sections for each category */}
         {Object.entries(CATEGORY_LABELS).map(([category, label]) => {
-          const locations = locationsByCategory[category as LocationCategory];
+          const locations = allLocations.filter(loc => loc.category === category);
           if (!locations || locations.length === 0) return null;
           
           return (

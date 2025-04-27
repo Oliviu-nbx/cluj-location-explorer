@@ -1,22 +1,44 @@
-
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Star, Bookmark } from "lucide-react";
 import { Location } from "@/types/location";
+import { FavoritesService } from "@/services/FavoritesService";
+import { useAuth } from "@/components/AuthContext";
 
 interface LocationCardProps {
   location: Location;
 }
 
 const LocationCard = ({ location }: LocationCardProps) => {
-  // Function to generate price level display
+  const { user } = useAuth();
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      FavoritesService.checkIsFavorite(location.id)
+        .then(setIsFavorite)
+        .catch(console.error);
+    }
+  }, [location.id, user]);
+
+  const handleToggleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    try {
+      const newFavoriteStatus = await FavoritesService.toggleFavorite(location.id);
+      setIsFavorite(newFavoriteStatus);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
   const getPriceLevel = (level?: number) => {
     if (!level) return null;
     return "€".repeat(level);
   };
 
-  // Placeholder image when no photos are available
   const imageSrc = location.photos?.length
     ? `https://source.unsplash.com/random/600x400/?${location.category.replace('_', '-')}`
     : `https://source.unsplash.com/random/600x400/?${location.category.replace('_', '-')}`;
@@ -29,12 +51,24 @@ const LocationCard = ({ location }: LocationCardProps) => {
           alt={`Photo of ${location.name} in Cluj-Napoca`} 
           className="location-card-image"
         />
-        <Badge 
-          className="absolute top-2 right-2"
-          variant="secondary"
-        >
-          {getPriceLevel(location.priceLevel) || "Free"}
-        </Badge>
+        <div className="absolute top-2 right-2 flex gap-2">
+          <Badge variant="secondary">
+            {getPriceLevel(location.priceLevel) || "Free"}
+          </Badge>
+          {user && (
+            <Button
+              size="icon"
+              variant="secondary"
+              className={`h-8 w-8 ${isFavorite ? 'bg-primary text-primary-foreground' : ''}`}
+              onClick={handleToggleFavorite}
+            >
+              <Bookmark className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
+              <span className="sr-only">
+                {isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              </span>
+            </Button>
+          )}
+        </div>
       </div>
       
       <CardContent className="py-4 flex-1">
