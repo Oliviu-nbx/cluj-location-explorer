@@ -3,66 +3,66 @@ import { useEffect, useState } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
-import { MapPin, ListOrdered, LogOut, LayoutDashboard, BarChart, AlertTriangle, Webhook, Database } from "lucide-react";
+import { MapPin, ListOrdered, LogOut, LayoutDashboard, BarChart, AlertTriangle, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 export default function AdminLayout() {
   const { user, isAdmin, isLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
   const { toast } = useToast();
   
   useEffect(() => {
-    console.log('AdminLayout - Auth state check:', { 
+    console.log('AdminLayout - Auth state:', { 
       user: !!user, 
       isAdmin, 
-      isLoading,
-      email: user?.email 
+      isLoading 
     });
 
     if (isLoading) {
-      console.log('AdminLayout - Still loading auth state...');
-      setAuthError(null);
-      return;
+      return; // Wait for auth to complete
     }
 
     if (!user) {
-      console.log('AdminLayout - No user found, redirecting to /auth');
+      console.log('AdminLayout - No user found, redirecting to login');
       navigate("/auth?redirect=/admin", { replace: true });
       return;
     }
 
-    // If authentication check is complete and user is not admin
+    // If user is logged in but not admin
     if (!isAdmin) {
-      console.log('AdminLayout - User is not admin, displaying error');
-      setAuthError("You don't have admin privileges. If you believe this is an error, please contact support.");
-      
-      // Show a toast notification
+      console.log('AdminLayout - User is not admin');
       toast({
         variant: "destructive",
         title: "Access Denied",
         description: "You don't have admin privileges",
       });
       
-      // After a short delay, redirect to home page
+      // Redirect to home page
       setTimeout(() => {
         navigate("/", { replace: true });
-      }, 3000);
+      }, 1500);
       return;
     }
 
-    // If we get here, user is logged in and is admin
-    console.log('AdminLayout - User is authorized as admin');
-    setAuthError(null);
+    // User is logged in and is admin
+    console.log('AdminLayout - User authorized as admin');
     setIsAuthorized(true);
   }, [user, isAdmin, isLoading, navigate, toast]);
+
+  // Handle sign out
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/", { replace: true });
+  };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
+        <div className="text-center p-6 bg-white rounded-lg shadow-md">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
           <h2 className="text-xl font-medium mb-2">Loading...</h2>
           <p className="text-gray-500">Verifying admin access</p>
         </div>
@@ -70,12 +70,14 @@ export default function AdminLayout() {
     );
   }
 
-  if (authError) {
+  if (!user || !isAuthorized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center max-w-md p-6 bg-red-50 rounded-lg border border-red-200">
           <h2 className="text-xl font-medium mb-2 text-red-700">Access Denied</h2>
-          <p className="text-gray-700 mb-4">{authError}</p>
+          <p className="text-gray-700 mb-4">
+            You don't have admin privileges. If you believe this is an error, please contact support.
+          </p>
           <Button onClick={() => navigate("/")} variant="outline">
             Go to Homepage
           </Button>
@@ -83,12 +85,6 @@ export default function AdminLayout() {
       </div>
     );
   }
-
-  if (!isAuthorized) {
-    return null;
-  }
-
-  console.log('AdminLayout - Rendering admin interface for user:', user?.email);
   
   return (
     <SidebarProvider defaultOpen>
@@ -137,7 +133,7 @@ export default function AdminLayout() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={signOut}>
+                <SidebarMenuButton onClick={handleSignOut}>
                   <LogOut />
                   <span>Sign Out</span>
                 </SidebarMenuButton>

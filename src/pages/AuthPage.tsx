@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/components/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 const AuthPage = () => {
   const [email, setEmail] = useState('');
@@ -22,30 +23,24 @@ const AuthPage = () => {
   const searchParams = new URLSearchParams(location.search);
   const redirectTo = searchParams.get('redirect') || '/';
 
-  // Check current auth status and redirect if already logged in
+  // Check auth status and redirect if already logged in
   useEffect(() => {
-    console.log('AuthPage - Auth check:', { user: !!user, isAdmin, isLoading });
-    
     if (isLoading) {
-      console.log('AuthPage - Auth state still loading...');
-      return;
+      return; // Wait until auth state is determined
     }
     
     if (user) {
-      if (isAdmin && redirectTo.includes('/admin')) {
-        console.log('AuthPage - Already logged in as admin, redirecting to admin panel');
-        navigate(redirectTo, { replace: true });
-      } else if (!redirectTo.includes('/admin')) {
-        console.log('AuthPage - Already logged in as regular user, redirecting to home');
-        navigate('/', { replace: true });
-      } else if (!isAdmin && redirectTo.includes('/admin')) {
-        console.log('AuthPage - User is not admin but trying to access admin panel');
+      console.log('Already logged in, redirecting to', redirectTo);
+      
+      if (redirectTo.includes('/admin') && !isAdmin) {
         toast({
           variant: "destructive",
           title: "Access Denied",
           description: "You don't have admin privileges",
         });
         navigate('/', { replace: true });
+      } else {
+        navigate(redirectTo, { replace: true });
       }
     }
   }, [user, isAdmin, isLoading, navigate, redirectTo, toast]);
@@ -69,8 +64,8 @@ const AuthPage = () => {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: error.message,
+        title: "Sign Up Failed",
+        description: error.message || "An error occurred during registration",
       });
     } finally {
       setLoading(false);
@@ -90,15 +85,15 @@ const AuthPage = () => {
 
       if (error) throw error;
 
-      console.log('Sign in successful, will be redirected by auth state change');
-      // Don't navigate here - let the auth state change handler do it
+      console.log('Sign in successful, redirecting...');
+      // Auth state change will handle the redirect
       
     } catch (error: any) {
       console.error('Sign in error:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: error.message,
+        title: "Sign In Failed",
+        description: error.message || "Invalid email or password",
       });
       setLoading(false);
     }
@@ -106,15 +101,11 @@ const AuthPage = () => {
 
   if (isLoading) {
     return (
-      <div className="container max-w-md my-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Loading...</CardTitle>
-            <CardDescription>
-              Checking authentication status...
-            </CardDescription>
-          </CardHeader>
-        </Card>
+      <div className="container max-w-md mx-auto my-8 p-6 bg-white rounded-md shadow">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-center text-gray-500">Checking authentication status...</p>
+        </div>
       </div>
     );
   }
@@ -122,75 +113,96 @@ const AuthPage = () => {
   // If already authenticated, don't show the form
   if (user) {
     return (
-      <div className="container max-w-md my-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Already Authenticated</CardTitle>
-            <CardDescription>
-              You are already signed in. Redirecting...
-            </CardDescription>
-          </CardHeader>
-        </Card>
+      <div className="container max-w-md mx-auto my-8 p-6 bg-white rounded-md shadow">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <p className="text-center text-gray-500">Already signed in. Redirecting...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="container max-w-md my-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Welcome to Cluj Compass</CardTitle>
-          <CardDescription>
-            Sign in or create an account to save your favorite places and write reviews.
+      <Card className="shadow-lg">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">Welcome</CardTitle>
+          <CardDescription className="text-center">
+            Sign in or create an account to get started
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
 
             <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="space-y-4">
-                <Input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <Input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className="space-y-2">
+                  <Input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full"
+                  />
+                </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Signing in...' : 'Sign In'}
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing in...
+                    </>
+                  ) : (
+                    "Sign In"
+                  )}
                 </Button>
               </form>
             </TabsContent>
 
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
-                <Input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <Input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className="space-y-2">
+                  <Input
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full"
+                  />
+                </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Creating account...' : 'Sign Up'}
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    "Sign Up"
+                  )}
                 </Button>
               </form>
             </TabsContent>
