@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/components/AuthContext";
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
-import { MapPin, ListOrdered, LogOut, LayoutDashboard } from "lucide-react";
+import { MapPin, ListOrdered, LogOut, LayoutDashboard, BarChart, AlertTriangle, Webhook, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function AdminLayout() {
@@ -81,9 +81,27 @@ export default function AdminLayout() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => navigate("/admin/scraping")}>
+                  <Database />
+                  <span>Data Scraping</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => navigate("/admin/categories")}>
                   <ListOrdered />
                   <span>Categories</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => navigate("/admin/analytics")}>
+                  <BarChart />
+                  <span>Analytics</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => navigate("/admin/monitoring")}>
+                  <AlertTriangle />
+                  <span>Monitoring</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

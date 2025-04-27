@@ -14,6 +14,7 @@ import AuthPage from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import LocationsPage from "./pages/admin/LocationsPage";
 import CategoriesPage from "./pages/admin/CategoriesPage";
+import ScrapingPage from "./pages/admin/ScrapingPage";
 import SitemapIndexPage from "./pages/sitemap/SitemapIndexPage";
 import LocationSitemapPage from "./pages/sitemap/LocationSitemapPage";
 import PagesSitemapPage from "./pages/sitemap/PagesSitemapPage";
@@ -44,8 +45,10 @@ const App = () => (
               <Route path="/:categorySlug/:locationSlug" element={<LocationPage />} />
             </Route>
             <Route path="/admin" element={<AdminLayout />}>
+              <Route path="" element={<AnalyticsDashboard />} />
               <Route path="locations" element={<LocationsPage />} />
               <Route path="categories" element={<CategoriesPage />} />
+              <Route path="scraping" element={<ScrapingPage />} />
               <Route path="analytics" element={<AnalyticsDashboard />} />
               <Route path="monitoring" element={<ErrorMonitoringDashboard />} />
             </Route>
