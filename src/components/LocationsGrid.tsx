@@ -30,14 +30,18 @@ const LocationsGrid = ({ locations, title, category }: LocationsGridProps) => {
   });
 
   return (
-    <div className="my-8">
-      {title && <h2 className="text-2xl font-display font-bold mb-6">{title}</h2>}
+    <div className="my-8 animate-fade-in">
+      {title && (
+        <h2 className="text-2xl font-display font-bold mb-6">{title}</h2>
+      )}
       
-      <div className="flex justify-between items-center mb-6">
-        <p className="text-gray-500">{locations.length} locations found</p>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <p className="text-muted-foreground">
+          {locations.length} location{locations.length !== 1 ? 's' : ''} found
+        </p>
         
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Sort by:</span>
+          <span className="text-sm text-muted-foreground">Sort by:</span>
           <Select value={sortOption} onValueChange={setSortOption}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Sort by" />

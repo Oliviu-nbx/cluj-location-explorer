@@ -42,26 +42,30 @@ const LocationCard = ({ location }: LocationCardProps) => {
   };
 
   const imageSrc = location.photos?.length
-    ? `https://source.unsplash.com/random/600x400/?${location.category.replace('_', '-')}`
-    : `https://source.unsplash.com/random/600x400/?${location.category.replace('_', '-')}`;
+    ? `https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=60`
+    : `https://source.unsplash.com/random/800x600/?${location.category.replace('_', '-')}`;
 
   return (
-    <Card className="location-card h-full flex flex-col animate-fade-in">
-      <div className="relative h-48">
+    <Card className="group h-full overflow-hidden transform transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+      <div className="relative h-48 sm:h-64 overflow-hidden">
         <OptimizedImage 
           src={imageSrc} 
           alt={`${location.name} in Cluj-Napoca`} 
-          className="h-full w-full"
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
         <div className="absolute top-2 right-2 flex gap-2">
-          <Badge variant="secondary">
-            {getPriceLevel(location.priceLevel) || "Free"}
-          </Badge>
+          {location.priceLevel && (
+            <Badge variant="secondary" className="bg-black/50 backdrop-blur-sm text-white border-none">
+              {getPriceLevel(location.priceLevel)}
+            </Badge>
+          )}
           {user && (
             <Button
               size="icon"
               variant="secondary"
-              className={`h-8 w-8 ${isFavorite ? 'bg-primary text-primary-foreground' : ''}`}
+              className={`h-8 w-8 bg-black/50 backdrop-blur-sm hover:bg-black/70 ${
+                isFavorite ? 'text-red-500' : 'text-white'
+              }`}
               onClick={handleToggleFavorite}
             >
               <Bookmark className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
@@ -73,36 +77,41 @@ const LocationCard = ({ location }: LocationCardProps) => {
         </div>
       </div>
       
-      <CardContent className="py-4 flex-1">
+      <CardContent className="p-4 sm:p-6">
         <Link to={`/${location.category}/${location.slug}`} className="hover:text-primary transition-colors">
-          <h3 className="font-display font-bold text-lg mb-2 line-clamp-2">{location.name}</h3>
+          <h3 className="font-display font-bold text-lg sm:text-xl mb-2 line-clamp-2">{location.name}</h3>
         </Link>
         
-        {location.rating && (
-          <div className="flex items-center gap-1 mb-2">
-            <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-            <span className="font-medium">{location.rating}</span>
-            <span className="text-gray-500 text-sm">
-              ({location.userRatingsTotal} reviews)
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 mb-3">
+          {location.rating && (
+            <div className="flex items-center gap-1">
+              <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+              <span className="font-medium">{location.rating.toFixed(1)}</span>
+              <span className="text-gray-500 text-sm">
+                ({location.userRatingsTotal})
+              </span>
+            </div>
+          )}
+          {location.openNow !== undefined && (
+            <Badge variant={location.openNow ? "success" : "destructive"} className="ml-auto">
+              {location.openNow ? 'Open Now' : 'Closed'}
+            </Badge>
+          )}
+        </div>
         
-        <p className="text-gray-500 text-sm mb-2">{location.address}</p>
-        
-        {location.openNow !== undefined && (
-          <p className={`text-sm ${location.openNow ? 'text-green-600' : 'text-red-600'}`}>
-            {location.openNow ? 'Open Now' : 'Closed'}
-          </p>
-        )}
+        <p className="text-muted-foreground text-sm flex items-center gap-2 mb-4">
+          <MapPin className="h-4 w-4" />
+          {location.address}
+        </p>
       </CardContent>
       
-      <CardFooter className="pt-0 pb-4">
+      <CardFooter className="px-4 sm:px-6 pb-4 sm:pb-6 pt-0">
         <Link 
           to={`/${location.category}/${location.slug}`}
-          className="text-sm font-medium text-primary hover:underline"
+          className="inline-flex items-center text-sm font-medium text-primary hover:text-primary/80"
         >
           View Details
+          <ChevronRight className="ml-1 h-4 w-4" />
         </Link>
       </CardFooter>
     </Card>
