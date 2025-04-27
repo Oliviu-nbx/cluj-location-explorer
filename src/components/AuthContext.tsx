@@ -33,6 +33,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             .single();
           
           setIsAdmin(data?.is_admin ?? false);
+          console.log('Admin status updated:', data?.is_admin);
         }
       }
     );
@@ -41,6 +42,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+
+      // Check admin status for existing session
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => {
+            setIsAdmin(data?.is_admin ?? false);
+            console.log('Initial admin status:', data?.is_admin);
+          });
+      }
     });
 
     return () => subscription.unsubscribe();
