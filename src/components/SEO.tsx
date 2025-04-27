@@ -36,6 +36,7 @@ interface StructuredData {
   sameAs?: string[];
   image?: string | string[];
   priceRange?: string;
+  logo?: string;
   aggregateRating?: {
     "@type": string;
     ratingValue: number;

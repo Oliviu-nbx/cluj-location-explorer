@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { LocationService } from "@/services/LocationService";
-import { Location, LocationCategory } from "@/types/location";
+import { Location, LocationCategory, CATEGORY_LABELS } from "@/types/location";
 import LocationSitemap from "@/components/sitemap/LocationSitemap";
 
 const LocationSitemapPage: React.FC = () => {
@@ -19,7 +19,7 @@ const LocationSitemapPage: React.FC = () => {
 
   useEffect(() => {
     const fetchLocations = async () => {
-      if (categorySlug && Object.keys(LocationCategory).includes(categorySlug)) {
+      if (categorySlug && Object.keys(CATEGORY_LABELS).includes(categorySlug)) {
         try {
           const locationData = await LocationService.getLocationsByCategory(categorySlug as LocationCategory);
           setLocations(locationData);
