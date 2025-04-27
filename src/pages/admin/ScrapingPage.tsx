@@ -1,457 +1,333 @@
 
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { ExternalLink, Copy, Database, Webhook, RefreshCw, Play } from "lucide-react";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { N8nWebhookSetup } from "@/components/admin/N8nWebhookSetup";
+import { supabase } from "@/integrations/supabase/client";
 
-// Form schemas
-const n8nWebhookSchema = z.object({
-  webhookUrl: z.string().url("Please enter a valid URL"),
-});
-
-const apifyIntegrationSchema = z.object({
-  apifyToken: z.string().min(1, "Apify token is required"),
-  actorId: z.string().min(1, "Actor ID is required"),
-});
-
-const googlePlacesSchema = z.object({
-  query: z.string().min(3, "Search query must be at least 3 characters"),
-  location: z.string().optional(),
-  radius: z.coerce.number().min(100, "Radius must be at least 100 meters").max(50000, "Radius must be less than 50km"),
-});
-
-type N8nWebhookFormValues = z.infer<typeof n8nWebhookSchema>;
-type ApifyIntegrationFormValues = z.infer<typeof apifyIntegrationSchema>;
-type GooglePlacesFormValues = z.infer<typeof googlePlacesSchema>;
-
-export default function ScrapingPage() {
+const ScrapingPage = () => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("n8n");
-  const [isProcessing, setIsProcessing] = useState(false);
-  
-  // N8n webhook form
-  const n8nForm = useForm<N8nWebhookFormValues>({
-    resolver: zodResolver(n8nWebhookSchema),
-    defaultValues: {
-      webhookUrl: localStorage.getItem("n8nWebhookUrl") || "",
-    },
+  const [loading, setLoading] = useState({
+    googlePlaces: false,
+    apify: false,
+    n8n: false
   });
-  
-  // Apify integration form
-  const apifyForm = useForm<ApifyIntegrationFormValues>({
-    resolver: zodResolver(apifyIntegrationSchema),
-    defaultValues: {
-      apifyToken: localStorage.getItem("apifyToken") || "",
-      actorId: localStorage.getItem("apifyActorId") || "apify/google-places-scraper",
-    },
-  });
-  
-  // Google Places direct query form
-  const googlePlacesForm = useForm<GooglePlacesFormValues>({
-    resolver: zodResolver(googlePlacesSchema),
-    defaultValues: {
-      query: "",
-      location: "46.77,23.59", // Cluj-Napoca center
-      radius: 5000,
-    },
-  });
+  const [apifyToken, setApifyToken] = useState("");
+  const [apifyQuery, setApifyQuery] = useState("restaurants in Cluj-Napoca");
+  const [apifyMaxPlaces, setApifyMaxPlaces] = useState("10");
+  const [apifyActor, setApifyActor] = useState("apify/google-places-scraper");
+  const [googleQuery, setGoogleQuery] = useState("");
+  const [googleRadius, setGoogleRadius] = useState("1000");
+  const [googleType, setGoogleType] = useState("restaurant");
 
-  // The payload example that n8n webhook would receive
-  const examplePayload = {
-    name: "Coffee Shop Example",
-    category_id: "restaurant", 
-    slug: "coffee-shop-example",
-    address: "123 Main St, Anytown, USA",
-    latitude: 40.7128,
-    longitude: -74.0060,
-    phone: "555-123-4567",
-    website: "https://example.com",
-    place_id: "example-place-id",
-    rating: 4.5,
-    price_level: 2,
-  };
-
-  const examplePayloadString = JSON.stringify(examplePayload, null, 2);
-
-  // Helper to copy content to clipboard
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      description: "Copied to clipboard",
-    });
-  };
-
-  // Handle n8n webhook testing
-  const handleTestN8nWebhook = async (data: N8nWebhookFormValues) => {
-    setIsProcessing(true);
-    
+  // Handle Google Places API direct search
+  const handleGoogleSearch = async () => {
+    setLoading((prev) => ({ ...prev, googlePlaces: true }));
     try {
-      // Test the webhook by sending a request
-      await fetch(data.webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        mode: "no-cors", // Add this to handle potential CORS issues
-        body: JSON.stringify({
-          test: true,
-          message: "This is a test from the location management system",
-        }),
-      });
-      
-      // Store the webhook URL in localStorage for future use
-      localStorage.setItem("n8nWebhookUrl", data.webhookUrl);
-      
-      toast({
-        title: "Webhook Test",
-        description: "A test message was sent to your n8n webhook.",
-      });
-    } catch (error) {
-      console.error("Error testing webhook:", error);
-      
-      toast({
-        variant: "destructive",
-        title: "Webhook Test Failed",
-        description: "Failed to send test message to the webhook URL. Please check the URL and try again.",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+      // Validate inputs
+      if (!googleQuery) {
+        throw new Error("Location query is required");
+      }
 
-  // Handle Apify integration
-  const handleRunApify = async (data: ApifyIntegrationFormValues) => {
-    setIsProcessing(true);
-    
-    try {
-      // Save Apify credentials in localStorage
-      localStorage.setItem("apifyToken", data.apifyToken);
-      localStorage.setItem("apifyActorId", data.actorId);
-      
-      // Use Supabase edge function to trigger the Apify actor
-      const { data: response, error } = await supabase.functions.invoke("apify-places-scraper", {
+      // Get coordinates from the location query
+      const response = await supabase.functions.invoke("google-places", {
         body: {
-          token: data.apifyToken,
-          actorId: data.actorId,
-          searchParams: {
-            queries: "restaurants in Cluj-Napoca",
-            language: "en",
-            maxCrawledPlaces: 10,
+          action: "geocode",
+          params: {
+            address: googleQuery,
           },
         },
       });
 
-      if (error) throw error;
-      
-      console.log("Apify run response:", response);
-      
-      toast({
-        title: "Apify Run Started",
-        description: "The scraping job has started successfully. Results will be processed when available.",
-      });
-    } catch (error) {
-      console.error("Error running Apify:", error);
-      
-      toast({
-        variant: "destructive",
-        title: "Apify Run Failed",
-        description: "Failed to start the scraping job. Please check your Apify credentials and try again.",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+      if (!response.data.results || response.data.results.length === 0) {
+        throw new Error("Location not found");
+      }
 
-  // Handle Google Places direct query
-  const handleQueryGooglePlaces = async (data: GooglePlacesFormValues) => {
-    setIsProcessing(true);
-    
-    try {
-      // Use the existing Google Places edge function
-      const { data: response, error } = await supabase.functions.invoke("google-places", {
+      const location = response.data.results[0].geometry.location;
+      const locationString = `${location.lat},${location.lng}`;
+
+      // Search for places near the location
+      const placesResponse = await supabase.functions.invoke("google-places", {
         body: {
           action: "searchNearby",
           params: {
-            location: data.location ? 
-              { lat: parseFloat(data.location.split(',')[0]), lng: parseFloat(data.location.split(',')[1]) } : 
-              { lat: 46.77, lng: 23.59 }, 
-            radius: data.radius,
-            keyword: data.query
+            location: locationString,
+            radius: parseInt(googleRadius),
+            type: googleType,
+          },
+        },
+      });
+
+      if (!placesResponse.data.results) {
+        throw new Error("No places found");
+      }
+
+      // Process each place
+      const places = placesResponse.data.results;
+      let processedCount = 0;
+
+      for (const place of places) {
+        // Get additional details for each place
+        const detailsResponse = await supabase.functions.invoke("google-places", {
+          body: {
+            action: "getPlaceDetails",
+            params: {
+              placeId: place.place_id,
+            },
+          },
+        });
+
+        const placeDetails = detailsResponse.data.result;
+        
+        if (placeDetails) {
+          // Map the place details to our location structure
+          const location = {
+            place_id: placeDetails.place_id,
+            name: placeDetails.name,
+            slug: placeDetails.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+            category_id: googleType,
+            address: placeDetails.formatted_address || place.vicinity,
+            latitude: placeDetails.geometry.location.lat,
+            longitude: placeDetails.geometry.location.lng,
+            phone: placeDetails.formatted_phone_number,
+            website: placeDetails.website,
+            rating: placeDetails.rating,
+            price_level: placeDetails.price_level
+          };
+
+          // Store the location in our database
+          const { error } = await supabase.functions.invoke("process-location", {
+            body: location
+          });
+
+          if (!error) {
+            processedCount++;
           }
+        }
+      }
+
+      toast({
+        title: "Scraping Complete",
+        description: `Successfully added ${processedCount} locations.`,
+      });
+    } catch (error) {
+      console.error("Error scraping from Google Places:", error);
+      toast({
+        variant: "destructive",
+        title: "Scraping Failed",
+        description: error.message || "An error occurred during the Google Places scraping process.",
+      });
+    } finally {
+      setLoading((prev) => ({ ...prev, googlePlaces: false }));
+    }
+  };
+
+  // Handle Apify scraping
+  const handleApifyScraping = async () => {
+    setLoading((prev) => ({ ...prev, apify: true }));
+    try {
+      // Validate inputs
+      if (!apifyToken) {
+        throw new Error("Apify token is required");
+      }
+      
+      if (!apifyQuery) {
+        throw new Error("Search query is required");
+      }
+
+      const searchParams = {
+        queries: apifyQuery,
+        language: "en",
+        maxCrawledPlaces: parseInt(apifyMaxPlaces),
+      };
+
+      const response = await supabase.functions.invoke("apify-places-scraper", {
+        body: {
+          token: apifyToken,
+          actorId: apifyActor,
+          searchParams
         }
       });
 
-      if (error) throw error;
-      
-      console.log("Google Places query response:", response);
-      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
       toast({
-        title: "Places Retrieved",
-        description: `Found ${response.results.length} places matching your query.`,
+        title: "Apify Scraping Started",
+        description: "The scraping job has been started. Results will be processed in the background.",
       });
     } catch (error) {
-      console.error("Error querying Google Places:", error);
-      
+      console.error("Error starting Apify scraper:", error);
       toast({
         variant: "destructive",
-        title: "Query Failed",
-        description: "Failed to retrieve places from Google Places API. Please try again.",
+        title: "Scraping Failed",
+        description: error.message || "An error occurred while starting the Apify scraper.",
       });
     } finally {
-      setIsProcessing(false);
+      setLoading((prev) => ({ ...prev, apify: false }));
     }
   };
 
   return (
-    <div className="container mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Data Scraping Tools</h1>
-        <p className="text-gray-500">
-          Integrate with external services to scrape location data
-        </p>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-3 mb-8">
-          <TabsTrigger value="n8n">n8n Integration</TabsTrigger>
-          <TabsTrigger value="apify">Apify Integration</TabsTrigger>
+    <div className="container mx-auto py-6 space-y-6">
+      <h1 className="text-3xl font-bold">Location Scraping Tools</h1>
+      
+      <Tabs defaultValue="google">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="google">Google Places API</TabsTrigger>
+          <TabsTrigger value="apify">Apify Scraper</TabsTrigger>
+          <TabsTrigger value="n8n">n8n Workflows</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="n8n" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>n8n Webhook Integration</CardTitle>
-              <CardDescription>
-                Configure a webhook URL to receive data from n8n workflows
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...n8nForm}>
-                <form onSubmit={n8nForm.handleSubmit(handleTestN8nWebhook)} className="space-y-6">
-                  <FormField
-                    control={n8nForm.control}
-                    name="webhookUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>n8n Webhook URL</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="https://your-n8n-instance.com/webhook/..." 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button type="submit" disabled={isProcessing}>
-                    {isProcessing ? "Testing..." : "Test Connection"}
-                  </Button>
-                </form>
-              </Form>
-              
-              <div className="mt-8">
-                <h4 className="text-sm font-medium mb-2">Expected payload format:</h4>
-                <div className="relative">
-                  <pre className="bg-muted p-4 rounded-md text-xs overflow-auto max-h-[200px]">
-                    {examplePayloadString}
-                  </pre>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    onClick={() => copyToClipboard(examplePayloadString)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button 
-                variant="outline" 
-                onClick={() => window.open("https://n8n.io/integrations/", "_blank")}
-                className="mr-2"
-              >
-                n8n Documentation <ExternalLink className="ml-2 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
-          
-          <Alert>
-            <Database className="h-4 w-4" />
-            <AlertTitle>How n8n integration works</AlertTitle>
-            <AlertDescription>
-              Configure an n8n workflow to send location data to your webhook. 
-              Each time the workflow runs, it will send location data to your application.
-            </AlertDescription>
-          </Alert>
-        </TabsContent>
-
-        <TabsContent value="apify" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Apify Integration</CardTitle>
-              <CardDescription>
-                Use Apify actors to scrape location data from Google Maps
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...apifyForm}>
-                <form onSubmit={apifyForm.handleSubmit(handleRunApify)} className="space-y-6">
-                  <FormField
-                    control={apifyForm.control}
-                    name="apifyToken"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Apify API Token</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="password" 
-                            placeholder="Enter your Apify API token" 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={apifyForm.control}
-                    name="actorId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Actor ID</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="apify/google-places-scraper" 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <Button type="submit" disabled={isProcessing}>
-                    {isProcessing ? "Running..." : "Run Scraper"}
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button 
-                variant="outline" 
-                onClick={() => window.open("https://apify.com/store", "_blank")}
-                className="mr-2"
-              >
-                Apify Actors <ExternalLink className="ml-2 h-4 w-4" />
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => window.open("https://apify.com/apify/google-places-scraper", "_blank")}
-              >
-                Google Places Scraper <ExternalLink className="ml-2 h-4 w-4" />
-              </Button>
-            </CardFooter>
-          </Card>
-          
-          <Alert>
-            <Database className="h-4 w-4" />
-            <AlertTitle>How Apify integration works</AlertTitle>
-            <AlertDescription>
-              Apify actors can scrape location data from Google Maps and other sources.
-              Set up your Apify token and select an actor to start scraping locations.
-            </AlertDescription>
-          </Alert>
-        </TabsContent>
-
-        <TabsContent value="google" className="space-y-6">
+        <TabsContent value="google" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Google Places API</CardTitle>
               <CardDescription>
-                Query the Google Places API directly for location data
+                Search for places directly using Google Places API.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="googleQuery">Location</Label>
+                <Input
+                  id="googleQuery"
+                  placeholder="e.g. Cluj-Napoca, Romania"
+                  value={googleQuery}
+                  onChange={(e) => setGoogleQuery(e.target.value)}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="googleRadius">Radius (meters)</Label>
+                  <Input
+                    id="googleRadius"
+                    type="number"
+                    value={googleRadius}
+                    onChange={(e) => setGoogleRadius(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="googleType">Place Type</Label>
+                  <Select value={googleType} onValueChange={setGoogleType}>
+                    <SelectTrigger id="googleType">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="restaurant">Restaurants</SelectItem>
+                      <SelectItem value="cafe">Cafes</SelectItem>
+                      <SelectItem value="bar">Bars</SelectItem>
+                      <SelectItem value="lodging">Hotels</SelectItem>
+                      <SelectItem value="tourist_attraction">Tourist Attractions</SelectItem>
+                      <SelectItem value="museum">Museums</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                onClick={handleGoogleSearch} 
+                disabled={loading.googlePlaces}
+              >
+                {loading.googlePlaces ? "Searching..." : "Search Places"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="apify" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Apify Scraper</CardTitle>
+              <CardDescription>
+                Use Apify's Google Places Scraper for more comprehensive data collection.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="apifyToken">Apify API Token</Label>
+                <Input
+                  id="apifyToken"
+                  type="password"
+                  placeholder="Your Apify API token"
+                  value={apifyToken}
+                  onChange={(e) => setApifyToken(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="apifyQuery">Search Query</Label>
+                <Textarea
+                  id="apifyQuery"
+                  placeholder="e.g. restaurants in Cluj-Napoca"
+                  value={apifyQuery}
+                  onChange={(e) => setApifyQuery(e.target.value)}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="apifyMaxPlaces">Max Places</Label>
+                  <Input
+                    id="apifyMaxPlaces"
+                    type="number"
+                    value={apifyMaxPlaces}
+                    onChange={(e) => setApifyMaxPlaces(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="apifyActor">Actor</Label>
+                  <Select value={apifyActor} onValueChange={setApifyActor}>
+                    <SelectTrigger id="apifyActor">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="apify/google-places-scraper">Google Places Scraper</SelectItem>
+                      <SelectItem value="apify/tripadvisor-scraper">TripAdvisor Scraper</SelectItem>
+                      <SelectItem value="apify/booking-scraper">Booking.com Scraper</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                onClick={handleApifyScraping} 
+                disabled={loading.apify}
+              >
+                {loading.apify ? "Starting..." : "Start Scraping"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="n8n" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>n8n Workflow Integration</CardTitle>
+              <CardDescription>
+                Set up a webhook endpoint for n8n workflows to send location data.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Form {...googlePlacesForm}>
-                <form onSubmit={googlePlacesForm.handleSubmit(handleQueryGooglePlaces)} className="space-y-6">
-                  <FormField
-                    control={googlePlacesForm.control}
-                    name="query"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Search Query</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="restaurants, hotels, attractions, etc." 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={googlePlacesForm.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Location (lat,lng)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              placeholder="46.77,23.59" 
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={googlePlacesForm.control}
-                      name="radius"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Radius (meters)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="5000" 
-                              {...field}
-                              onChange={e => field.onChange(Number(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <Button type="submit" disabled={isProcessing}>
-                    {isProcessing ? "Searching..." : "Search Places"}
-                  </Button>
-                </form>
-              </Form>
+              <N8nWebhookSetup />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
     </div>
   );
-}
+};
+
+export default ScrapingPage;
