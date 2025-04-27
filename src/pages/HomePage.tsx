@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { LocationService } from "@/services/LocationService";
 import { Location, LocationCategory, CATEGORY_LABELS } from "@/types/location";
@@ -13,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const HomePage = () => {
   const [allLocations, setAllLocations] = useState<Location[]>([]);
   const [filteredLocations, setFilteredLocations] = useState<Location[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<LocationCategory | ''>('');
+  const [selectedCategory, setSelectedCategory] = useState<LocationCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   
@@ -36,7 +37,7 @@ const HomePage = () => {
   useEffect(() => {
     let filtered = allLocations;
     
-    if (selectedCategory) {
+    if (selectedCategory && selectedCategory !== 'all') {
       filtered = filtered.filter(loc => loc.category === selectedCategory);
     }
     
@@ -51,7 +52,7 @@ const HomePage = () => {
     setFilteredLocations(filtered);
   }, [selectedCategory, searchQuery, allLocations]);
 
-  const handleCategoryChange = (category: LocationCategory | '') => {
+  const handleCategoryChange = (category: LocationCategory | 'all') => {
     setSelectedCategory(category);
   };
 
@@ -95,8 +96,8 @@ const HomePage = () => {
           
           <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
             <Button
-              variant={selectedCategory === '' ? "default" : "outline"}
-              onClick={() => setSelectedCategory('')}
+              variant={selectedCategory === 'all' ? "default" : "outline"}
+              onClick={() => setSelectedCategory('all')}
               className="whitespace-nowrap"
             >
               All Places

@@ -14,8 +14,8 @@ import {
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
-  onCategoryChange: (category: LocationCategory | '') => void;
-  selectedCategory: LocationCategory | '';
+  onCategoryChange: (category: LocationCategory | 'all') => void;
+  selectedCategory: LocationCategory | 'all';
 }
 
 const SearchBar = ({ onSearch, onCategoryChange, selectedCategory }: SearchBarProps) => {
@@ -27,9 +27,9 @@ const SearchBar = ({ onSearch, onCategoryChange, selectedCategory }: SearchBarPr
     }
   };
 
-  const handleCategoryChange = (value: LocationCategory | '') => {
+  const handleCategoryChange = (value: LocationCategory | 'all') => {
     onCategoryChange(value);
-    AnalyticsService.trackEvent('Category', 'select', value || 'all');
+    AnalyticsService.trackEvent('Category', 'select', value);
   };
 
   return (
@@ -52,7 +52,7 @@ const SearchBar = ({ onSearch, onCategoryChange, selectedCategory }: SearchBarPr
           <SelectValue placeholder="All Categories" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Categories</SelectItem>
+          <SelectItem value="all">All Categories</SelectItem>
           {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
             <SelectItem key={key} value={key}>{label}</SelectItem>
           ))}
