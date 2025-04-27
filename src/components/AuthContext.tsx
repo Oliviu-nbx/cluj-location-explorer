@@ -7,6 +7,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   isAdmin: boolean;
+  isLoading: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -21,6 +22,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // Helper function to check admin status
   const checkAdminStatus = async (userId: string) => {
     try {
+      console.log('Checking admin status for user:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('is_admin')
@@ -41,9 +43,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
+    console.log('AuthProvider initializing...');
     setIsLoading(true);
     
-    // Set up auth state listener
+    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log('Auth state changed:', event, !!currentSession);
@@ -51,15 +54,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          // Check admin status asynchronously
-          const isUserAdmin = await checkAdminStatus(currentSession.user.id);
-          console.log('Is user admin:', isUserAdmin);
-          setIsAdmin(isUserAdmin);
+          // Use setTimeout to avoid potential deadlock with Supabase client
+          setTimeout(async () => {
+            const isUserAdmin = await checkAdminStatus(currentSession.user.id);
+            console.log('Is user admin:', isUserAdmin);
+            setIsAdmin(isUserAdmin);
+            setIsLoading(false);
+          }, 0);
         } else {
           setIsAdmin(false);
+          setIsLoading(false);
         }
-        
-        setIsLoading(false);
       }
     );
 
@@ -83,13 +88,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signOut = async () => {
+    console.log('Signing out...');
     await supabase.auth.signOut();
     setIsAdmin(false);
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, isAdmin, signOut }}>
-      {!isLoading && children}
+    <AuthContext.Provider value={{ session, user, isAdmin, isLoading, signOut }}>
+      {children}
     </AuthContext.Provider>
   );
 };

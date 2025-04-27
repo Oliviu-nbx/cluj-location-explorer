@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,23 +14,41 @@ const AuthPage = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isLoading } = useAuth();
+  
+  // Get redirect URL from query params if present
+  const searchParams = new URLSearchParams(location.search);
+  const redirectTo = searchParams.get('redirect') || '/';
 
   // Check current auth status and redirect if already logged in
   useEffect(() => {
-    console.log('AuthPage - Auth check:', { user: !!user, isAdmin });
+    console.log('AuthPage - Auth check:', { user: !!user, isAdmin, isLoading });
+    
+    if (isLoading) {
+      console.log('AuthPage - Auth state still loading...');
+      return;
+    }
     
     if (user) {
-      if (isAdmin && window.location.pathname.includes('/admin')) {
+      if (isAdmin && redirectTo.includes('/admin')) {
         console.log('AuthPage - Already logged in as admin, redirecting to admin panel');
-        navigate('/admin');
-      } else if (!window.location.pathname.includes('/admin')) {
+        navigate(redirectTo, { replace: true });
+      } else if (!redirectTo.includes('/admin')) {
         console.log('AuthPage - Already logged in as regular user, redirecting to home');
-        navigate('/');
+        navigate('/', { replace: true });
+      } else if (!isAdmin && redirectTo.includes('/admin')) {
+        console.log('AuthPage - User is not admin but trying to access admin panel');
+        toast({
+          variant: "destructive",
+          title: "Access Denied",
+          description: "You don't have admin privileges",
+        });
+        navigate('/', { replace: true });
       }
     }
-  }, [user, isAdmin, navigate]);
+  }, [user, isAdmin, isLoading, navigate, redirectTo, toast]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +92,6 @@ const AuthPage = () => {
 
       console.log('Sign in successful, will be redirected by auth state change');
       // Don't navigate here - let the auth state change handler do it
-      // This prevents race conditions with admin status checks
       
     } catch (error: any) {
       console.error('Sign in error:', error);
@@ -86,6 +103,37 @@ const AuthPage = () => {
       setLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="container max-w-md my-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Loading...</CardTitle>
+            <CardDescription>
+              Checking authentication status...
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  // If already authenticated, don't show the form
+  if (user) {
+    return (
+      <div className="container max-w-md my-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Already Authenticated</CardTitle>
+            <CardDescription>
+              You are already signed in. Redirecting...
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-md my-8">
