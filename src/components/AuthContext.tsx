@@ -24,20 +24,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('Checking admin status for user:', userId);
       
-      // Using a simpler query to avoid recursion issues
+      // Using a direct query with service role to bypass RLS
+      // This avoids the infinite recursion
       const { data, error } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', userId)
+        .rpc('check_is_admin', { user_id: userId })
         .maybeSingle();
       
       if (error) {
         console.error('Error fetching admin status:', error);
-        return false;
+        
+        // Fallback to a simple query if RPC fails
+        // Try direct query with explicit select
+        const profileQuery = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', userId)
+          .maybeSingle();
+          
+        if (profileQuery.error) {
+          console.error('Fallback query also failed:', profileQuery.error);
+          return false;
+        }
+        
+        return profileQuery.data?.is_admin === true;
       }
       
       console.log('Admin status check result:', data);
-      return data?.is_admin === true;
+      return data === true;
     } catch (err) {
       console.error('Exception checking admin status:', err);
       return false;
@@ -78,9 +91,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Check admin status for existing session
       if (session?.user) {
-        const isUserAdmin = await checkAdminStatus(session.user.id);
-        console.log('Initial admin status check:', isUserAdmin);
-        setIsAdmin(isUserAdmin);
+        try {
+          const isUserAdmin = await checkAdminStatus(session.user.id);
+          console.log('Initial admin status check:', isUserAdmin);
+          setIsAdmin(isUserAdmin);
+        } catch (error) {
+          console.error('Error checking initial admin status:', error);
+        }
       }
       
       setIsLoading(false);
