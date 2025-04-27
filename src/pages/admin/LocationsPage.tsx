@@ -84,7 +84,7 @@ export default function LocationsPage() {
                 <TableCell>{location.name}</TableCell>
                 <TableCell>{location.category}</TableCell>
                 <TableCell>{location.address}</TableCell>
-                <TableCell>{location.compositeScore || location.rating}</TableCell>
+                <TableCell>{location.compositeScore ?? location.rating}</TableCell>
                 <TableCell>
                   <Button 
                     variant="ghost" 

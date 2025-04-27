@@ -48,6 +48,7 @@ export interface Location {
   reviews?: LocationReview[];
   editorialSummary?: string;
   lastUpdated: string;
+  compositeScore?: number; // Added this property
 }
 
 export const CATEGORY_LABELS: Record<LocationCategory, string> = {

@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { Star, Phone, Globe, Clock, MapPin } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Location } from "@/types/location";
-import { PlaceInfo } from "@/types/place-info";
+import { PlaceInfo, PlaceSource } from "@/types/place-info";
 import MapView from "./MapView";
 import PlaceAggregatedInfo from "./PlaceAggregatedInfo";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,10 +26,11 @@ const LocationDetails = ({ location, relatedLocations = [] }: LocationDetailsPro
         .eq('location_id', location.id);
       
       if (!error && data) {
+        // Cast the source field to PlaceSource type to satisfy TypeScript
         setPlaceInfo(data.map(info => ({
           id: info.id,
           locationId: info.location_id,
-          source: info.source,
+          source: info.source as PlaceSource,
           rating: info.rating,
           reviewCount: info.review_count,
           priceLevel: info.price_level,

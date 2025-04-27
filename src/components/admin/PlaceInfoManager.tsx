@@ -127,7 +127,7 @@ const PlaceInfoManager = ({ locationId }: PlaceInfoManagerProps) => {
           onClick={() => setPlaceInfo([...placeInfo, {
             id: crypto.randomUUID(),
             locationId,
-            source: 'google',
+            source: 'google' as PlaceSource,
             rating: 0,
             reviewCount: 0,
             priceLevel: null,
