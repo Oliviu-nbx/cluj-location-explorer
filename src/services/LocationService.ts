@@ -11,6 +11,117 @@ export class LocationService {
     NEARBY_LOCATIONS: 5 * 60 * 1000  // 5 minutes
   };
 
+  private static SAMPLE_LOCATIONS: Location[] = [
+    {
+      id: 'hotel-1',
+      placeId: 'sample-hotel-1',
+      name: 'Grand Hotel Transilvania',
+      slug: 'grand-hotel-transilvania',
+      category: 'hotel',
+      address: '1 Unirii Square, Cluj-Napoca',
+      latitude: 46.7712,
+      longitude: 23.5964,
+      phone: '+40 264 594 999',
+      website: 'https://example.com/grand-hotel',
+      rating: 4.8,
+      userRatingsTotal: 520,
+      priceLevel: 4,
+      openNow: true,
+      photos: [],
+      types: ['lodging', 'hotel'],
+      reviews: [
+        {
+          authorName: 'John Smith',
+          rating: 5,
+          text: 'Excellent stay with amazing views of the city center!',
+          time: Date.now() / 1000,
+          profilePhotoUrl: 'https://example.com/profiles/john.jpg'
+        }
+      ],
+      editorialSummary: 'A luxurious 5-star hotel in the heart of Cluj-Napoca',
+      lastUpdated: new Date().toISOString(),
+      compositeScore: 4.8
+    },
+    {
+      id: 'restaurant-1',
+      placeId: 'sample-restaurant-1',
+      name: 'Casa Traditionala',
+      slug: 'casa-traditionala',
+      category: 'restaurant',
+      address: '15 Memorandumului Street, Cluj-Napoca',
+      latitude: 46.7690,
+      longitude: 23.5898,
+      phone: '+40 264 123 456',
+      website: 'https://example.com/casa-traditionala',
+      rating: 4.6,
+      userRatingsTotal: 850,
+      priceLevel: 2,
+      openNow: true,
+      photos: [],
+      types: ['restaurant', 'food'],
+      lastUpdated: new Date().toISOString(),
+      compositeScore: 4.6
+    },
+    {
+      id: 'bar-1',
+      placeId: 'sample-bar-1',
+      name: 'The Soviet',
+      slug: 'the-soviet',
+      category: 'bar',
+      address: '22 Piezisa Street, Cluj-Napoca',
+      latitude: 46.7623,
+      longitude: 23.5789,
+      rating: 4.7,
+      userRatingsTotal: 320,
+      priceLevel: 2,
+      openNow: true,
+      photos: [],
+      types: ['bar', 'point_of_interest'],
+      lastUpdated: new Date().toISOString(),
+      compositeScore: 4.7
+    },
+    {
+      id: 'club-1',
+      placeId: 'sample-club-1',
+      name: 'Form Space',
+      slug: 'form-space',
+      category: 'night_club',
+      address: '5 Decebal Street, Cluj-Napoca',
+      latitude: 46.7701,
+      longitude: 23.5882,
+      phone: '+40 264 777 888',
+      rating: 4.5,
+      userRatingsTotal: 1200,
+      priceLevel: 3,
+      openNow: false,
+      photos: [],
+      types: ['night_club', 'entertainment'],
+      lastUpdated: new Date().toISOString(),
+      compositeScore: 4.5
+    },
+    {
+      id: 'attraction-1',
+      placeId: 'sample-attraction-1',
+      name: 'Botanical Garden Alexandru Borza',
+      slug: 'botanical-garden-alexandru-borza',
+      category: 'tourist_attraction',
+      address: '42 Republicii Street, Cluj-Napoca',
+      latitude: 46.7623,
+      longitude: 23.5882,
+      phone: '+40 264 592 152',
+      website: 'https://example.com/botanical-garden',
+      rating: 4.9,
+      userRatingsTotal: 2500,
+      priceLevel: 1,
+      openNow: true,
+      photos: [],
+      types: ['tourist_attraction', 'park'],
+      editorialSummary: 'A beautiful garden featuring over 10,000 plant species',
+      lastUpdated: new Date().toISOString(),
+      compositeScore: 4.9
+    }
+  ];
+
   static async getAllLocations(): Promise<Location[]> {
     const cacheKey = 'all_locations';
     
@@ -22,41 +133,11 @@ export class LocationService {
     }
     
     try {
-      // Call Google Places API via our edge function
-      const { data: places, error } = await supabase.functions.invoke('google-places', {
-        body: {
-          action: 'searchNearby',
-          params: {
-            location: { lat: 46.77, lng: 23.59 }, // Cluj-Napoca center
-            radius: 5000, // 5km radius
-            type: 'establishment'
-          }
-        }
-      });
-
-      if (error) throw error;
-
-      // Transform Google Places data to match our Location interface
-      const locations = await Promise.all(places.results.map(async (place: any) => {
-        // Get detailed place information
-        const { data: details } = await supabase.functions.invoke('google-places', {
-          body: {
-            action: 'getPlaceDetails',
-            params: {
-              placeId: place.place_id
-            }
-          }
-        });
-
-        return this.transformGooglePlaceToLocation(details.result);
-      }));
-
-      // Cache the results
-      CacheService.set(cacheKey, locations, this.CACHE_TTL.ALL_LOCATIONS);
-      return locations;
+      // Return sample data instead of making API call
+      return this.SAMPLE_LOCATIONS;
     } catch (error) {
       console.error('Error fetching locations:', error);
-      throw error;
+      return this.SAMPLE_LOCATIONS; // Fallback to sample data
     }
   }
 
@@ -68,39 +149,8 @@ export class LocationService {
       return cachedData;
     }
     
-    try {
-      const { data: places, error } = await supabase.functions.invoke('google-places', {
-        body: {
-          action: 'searchNearby',
-          params: {
-            location: { lat: 46.77, lng: 23.59 }, // Cluj-Napoca center
-            radius: 5000,
-            type: category // Use the category as Google Places type
-          }
-        }
-      });
-
-      if (error) throw error;
-
-      const locations = await Promise.all(places.results.map(async (place: any) => {
-        const { data: details } = await supabase.functions.invoke('google-places', {
-          body: {
-            action: 'getPlaceDetails',
-            params: {
-              placeId: place.place_id
-            }
-          }
-        });
-
-        return this.transformGooglePlaceToLocation(details.result);
-      }));
-
-      CacheService.set(cacheKey, locations, this.CACHE_TTL.CATEGORY_LOCATIONS);
-      return locations;
-    } catch (error) {
-      console.error(`Error fetching locations for category ${category}:`, error);
-      throw error;
-    }
+    // Filter sample data by category
+    return this.SAMPLE_LOCATIONS.filter(location => location.category === category);
   }
 
   // Helper method to transform Google Place data to our Location interface
