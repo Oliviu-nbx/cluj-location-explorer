@@ -36,7 +36,7 @@ const ScrapingPage = () => {
       }
 
       // Get coordinates from the location query
-      const response = await supabase.functions.invoke("google-places", {
+      const geocodeResponse = await supabase.functions.invoke("google-places", {
         body: {
           action: "geocode",
           params: {
@@ -45,26 +45,25 @@ const ScrapingPage = () => {
         },
       });
 
-      if (!response.data.results || response.data.results.length === 0) {
+      if (!geocodeResponse.data || !geocodeResponse.data.results || geocodeResponse.data.results.length === 0) {
         throw new Error("Location not found");
       }
 
-      const location = response.data.results[0].geometry.location;
-      const locationString = `${location.lat},${location.lng}`;
+      const location = geocodeResponse.data.results[0].geometry.location;
 
       // Search for places near the location
       const placesResponse = await supabase.functions.invoke("google-places", {
         body: {
           action: "searchNearby",
           params: {
-            location: locationString,
+            location: location,
             radius: parseInt(googleRadius),
             type: googleType,
           },
         },
       });
 
-      if (!placesResponse.data.results) {
+      if (!placesResponse.data || !placesResponse.data.results || placesResponse.data.results.length === 0) {
         throw new Error("No places found");
       }
 
@@ -82,6 +81,11 @@ const ScrapingPage = () => {
             },
           },
         });
+
+        if (!detailsResponse.data || !detailsResponse.data.result) {
+          console.warn(`No details found for place: ${place.name}`);
+          continue;
+        }
 
         const placeDetails = detailsResponse.data.result;
         

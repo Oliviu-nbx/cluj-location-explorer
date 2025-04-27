@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { Client } from "https://esm.sh/@googlemaps/google-maps-services-js@3.3.36"
+import { createClient } from "https://esm.sh/@googlemaps/google-maps-services-js"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,7 +8,7 @@ const corsHeaders = {
 }
 
 const GOOGLE_MAPS_API_KEY = Deno.env.get('GOOGLE_MAPS_API_KEY')!;
-const client = new Client({});
+const googleMapsClient = createClient({});
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -18,48 +18,59 @@ serve(async (req) => {
 
   try {
     const { action, params } = await req.json()
-
+    
     switch (action) {
       case 'searchNearby': {
         const { location, radius, type } = params
-        const response = await client.placesNearby({
-          params: {
-            location,
-            radius,
-            type,
-            key: GOOGLE_MAPS_API_KEY,
-          },
-        })
         
-        return new Response(JSON.stringify(response.data), {
+        // Convert location to string format if it's an object
+        const locationParam = typeof location === 'object' 
+          ? `${location.lat},${location.lng}`
+          : location;
+        
+        // Use fetch directly instead of the client
+        const url = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
+        url.searchParams.append('location', locationParam);
+        url.searchParams.append('radius', radius.toString());
+        url.searchParams.append('type', type);
+        url.searchParams.append('key', GOOGLE_MAPS_API_KEY);
+        
+        const response = await fetch(url.toString());
+        const data = await response.json();
+        
+        return new Response(JSON.stringify(data), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
 
       case 'getPlaceDetails': {
         const { placeId } = params
-        const response = await client.placeDetails({
-          params: {
-            place_id: placeId,
-            key: GOOGLE_MAPS_API_KEY,
-          },
-        })
-
-        return new Response(JSON.stringify(response.data), {
+        
+        // Use fetch directly instead of the client
+        const url = new URL('https://maps.googleapis.com/maps/api/place/details/json');
+        url.searchParams.append('place_id', placeId);
+        url.searchParams.append('key', GOOGLE_MAPS_API_KEY);
+        
+        const response = await fetch(url.toString());
+        const data = await response.json();
+        
+        return new Response(JSON.stringify(data), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
 
       case 'geocode': {
         const { address } = params
-        const response = await client.geocode({
-          params: {
-            address,
-            key: GOOGLE_MAPS_API_KEY,
-          },
-        })
-
-        return new Response(JSON.stringify(response.data), {
+        
+        // Use fetch directly instead of the client
+        const url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
+        url.searchParams.append('address', address);
+        url.searchParams.append('key', GOOGLE_MAPS_API_KEY);
+        
+        const response = await fetch(url.toString());
+        const data = await response.json();
+        
+        return new Response(JSON.stringify(data), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
