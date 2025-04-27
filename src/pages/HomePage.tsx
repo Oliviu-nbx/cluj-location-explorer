@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { LocationService } from "@/services/LocationService";
 import { Location, LocationCategory } from "@/types/location";
@@ -90,8 +91,8 @@ const HomePage = () => {
           
           <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
             <Button
-              variant={selectedCategory === "all" ? "default" : "outline"}
-              onClick={() => setSelectedCategory("all")}
+              variant={selectedCategory === '' ? "default" : "outline"}
+              onClick={() => setSelectedCategory('')}
               className="whitespace-nowrap"
             >
               All Places

@@ -57,7 +57,8 @@ export const FavoritesService = {
 
     if (error) throw error;
     
-    return data.map(item => item.locations as Location);
+    // Transform data to match Location interface, similar to LocationService
+    return data.map(item => transformLocationData(item.locations));
   },
 
   checkIsFavorite: async (locationId: string): Promise<boolean> => {
@@ -74,4 +75,31 @@ export const FavoritesService = {
 
     return !!data;
   }
+};
+
+// Helper function to transform location data to match Location interface
+// This is similar to the function in LocationService.ts
+const transformLocationData = (item: any): Location => {
+  return {
+    id: item.id,
+    placeId: item.place_id,
+    name: item.name,
+    slug: item.slug,
+    category: item.category_id,
+    address: item.address,
+    latitude: item.latitude,
+    longitude: item.longitude,
+    phone: item.phone,
+    website: item.website,
+    rating: item.rating,
+    userRatingsTotal: item.user_ratings_total,
+    priceLevel: item.price_level,
+    openNow: item.open_now,
+    photos: [], // Default empty array if no photos
+    types: [item.category_id], // Use category_id as default type
+    openingHours: [], // Default empty array
+    reviews: [], // Default empty array
+    editorialSummary: item.editorial_summary,
+    lastUpdated: item.updated_at || item.created_at
+  };
 };
