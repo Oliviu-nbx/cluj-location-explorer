@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const [updating, setUpdating] = useState(false);
 
   // Fetch the current admin status when the component mounts
-  useState(() => {
+  useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
       
