@@ -9,7 +9,252 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      location_photos: {
+        Row: {
+          attribution: string | null
+          created_at: string
+          height: number
+          id: string
+          location_id: string
+          photo_reference: string
+          width: number
+        }
+        Insert: {
+          attribution?: string | null
+          created_at?: string
+          height: number
+          id?: string
+          location_id: string
+          photo_reference: string
+          width: number
+        }
+        Update: {
+          attribution?: string | null
+          created_at?: string
+          height?: number
+          id?: string
+          location_id?: string
+          photo_reference?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_photos_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      location_reviews: {
+        Row: {
+          author_name: string
+          created_at: string
+          id: string
+          location_id: string
+          profile_photo_url: string | null
+          rating: number
+          text: string
+          time: number
+        }
+        Insert: {
+          author_name: string
+          created_at?: string
+          id?: string
+          location_id: string
+          profile_photo_url?: string | null
+          rating: number
+          text: string
+          time: number
+        }
+        Update: {
+          author_name?: string
+          created_at?: string
+          id?: string
+          location_id?: string
+          profile_photo_url?: string | null
+          rating?: number
+          text?: string
+          time?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_reviews_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          address: string
+          category_id: string
+          created_at: string
+          editorial_summary: string | null
+          featured: boolean | null
+          id: string
+          latitude: number
+          longitude: number
+          name: string
+          open_now: boolean | null
+          phone: string | null
+          place_id: string
+          price_level: number | null
+          rating: number | null
+          slug: string
+          updated_at: string
+          user_ratings_total: number | null
+          website: string | null
+        }
+        Insert: {
+          address: string
+          category_id: string
+          created_at?: string
+          editorial_summary?: string | null
+          featured?: boolean | null
+          id?: string
+          latitude: number
+          longitude: number
+          name: string
+          open_now?: boolean | null
+          phone?: string | null
+          place_id: string
+          price_level?: number | null
+          rating?: number | null
+          slug: string
+          updated_at?: string
+          user_ratings_total?: number | null
+          website?: string | null
+        }
+        Update: {
+          address?: string
+          category_id?: string
+          created_at?: string
+          editorial_summary?: string | null
+          featured?: boolean | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          name?: string
+          open_now?: boolean | null
+          phone?: string | null
+          place_id?: string
+          price_level?: number | null
+          rating?: number | null
+          slug?: string
+          updated_at?: string
+          user_ratings_total?: number | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locations_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          is_admin: boolean | null
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          is_admin?: boolean | null
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          is_admin?: boolean | null
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      user_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          location_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_favorites_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_favorites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
