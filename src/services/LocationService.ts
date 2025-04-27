@@ -257,6 +257,32 @@ export class LocationService {
     }
   }
 
+  static async getLocationById(id: string): Promise<Location | null> {
+    const cacheKey = `location_by_id_${id}`;
+    
+    // Try to get from cache first
+    const cachedData = CacheService.get<Location>(cacheKey);
+    if (cachedData) {
+      console.log(`Using cached data for location ID: ${id}`);
+      return cachedData;
+    }
+    
+    try {
+      // Find the location in our sample data
+      const location = this.SAMPLE_LOCATIONS.find(loc => loc.id === id);
+      
+      if (location) {
+        // Cache the result if found
+        CacheService.set(cacheKey, location, this.CACHE_TTL.LOCATION_DETAILS);
+      }
+      
+      return location || null;
+    } catch (error) {
+      console.error(`Error fetching location with ID ${id}:`, error);
+      return null;
+    }
+  }
+
   static async getNearbyLocations(latitude: number, longitude: number, radius: number = 5): Promise<Location[]> {
     const cacheKey = `nearby_locations_${latitude}_${longitude}_${radius}`;
     
@@ -427,6 +453,48 @@ export class LocationService {
       CacheService.remove(`location_by_slug_${slug}`);
     } catch (error) {
       console.error("Error deleting location:", error);
+      throw error;
+    }
+  }
+
+  // New method to get place details for a location
+  static async getPlaceDetails(locationId: string) {
+    try {
+      const location = await this.getLocationById(locationId);
+      if (!location) {
+        throw new Error(`Location with ID ${locationId} not found`);
+      }
+      
+      // Here we would typically fetch additional place details from an API
+      // For now, we'll return some mock data based on the location
+      return {
+        location,
+        details: {
+          amenities: ["WiFi", "Parking", "Air Conditioning"],
+          checkInTime: location.category === 'hotel' ? "14:00" : null,
+          checkOutTime: location.category === 'hotel' ? "12:00" : null,
+          neighborhood: "City Center",
+          externalReviews: [
+            {
+              source: "TripAdvisor",
+              rating: 4.7,
+              reviewCount: 245
+            },
+            {
+              source: "Booking.com",
+              rating: 8.9,
+              reviewCount: 180
+            },
+            {
+              source: "Yelp",
+              rating: 4.5,
+              reviewCount: 120
+            }
+          ]
+        }
+      };
+    } catch (error) {
+      console.error("Error getting place details:", error);
       throw error;
     }
   }
