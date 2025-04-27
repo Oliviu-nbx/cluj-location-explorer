@@ -190,6 +190,13 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "locations_category_id_fkey1"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
         ]
       }
       place_info: {
@@ -316,6 +323,15 @@ export type Database = {
       admin_check: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      get_user_favorites: {
+        Args: { user_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          location_id: string
+          user_id: string
+        }[]
       }
       get_user_id: {
         Args: Record<PropertyKey, never>

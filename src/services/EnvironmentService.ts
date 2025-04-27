@@ -19,6 +19,7 @@ class EnvironmentService {
     enableNewFeature: EnvironmentService.isProd ? false : true,
     enablePremiumFeatures: EnvironmentService.isProd ? true : true,
     debugMode: !EnvironmentService.isProd,
+    useRealData: true, // Enable to use real data from Supabase
   };
   
   // Get API Base URL

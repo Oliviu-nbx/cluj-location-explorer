@@ -105,5 +105,8 @@ backend = "postgres"
 # > Changing this setting has performance impact
 mysql_logical_replication = false
 
+[functions]
 [functions.apify-places-scraper]
+verify_jwt = true
+[functions.admin-check]
 verify_jwt = true

@@ -111,7 +111,7 @@ export default function LocationsPage() {
             locations?.map((location) => (
               <TableRow key={location.id}>
                 <TableCell>{location.name}</TableCell>
-                <TableCell>{CATEGORY_LABELS[location.category as LocationCategory]}</TableCell>
+                <TableCell>{CATEGORY_LABELS[location.category as LocationCategory] || location.category}</TableCell>
                 <TableCell>{location.address}</TableCell>
                 <TableCell>{location.compositeScore ?? location.rating}</TableCell>
                 <TableCell>
@@ -126,10 +126,7 @@ export default function LocationsPage() {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => {
-                        setLocationToEdit(location);
-                        setIsEditLocationOpen(true);
-                      }}
+                      onClick={() => handleEditLocation(location)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>

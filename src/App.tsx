@@ -1,68 +1,115 @@
-
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { AuthProvider } from "./components/AuthContext";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import MainLayout from "./layouts/MainLayout";
-import AdminLayout from "./layouts/AdminLayout";
-import HomePage from "./pages/HomePage";
-import CategoryPage from "./pages/CategoryPage";
-import LocationPage from "./pages/LocationPage";
-import AuthPage from "./pages/AuthPage";
-import NotFound from "./pages/NotFound";
-import ProfilePage from "./pages/ProfilePage";
+import {
+  createBrowserRouter,
+  Navigate,
+  RouterProvider,
+} from "react-router-dom";
+import "./App.css";
+import AdminLayout from "./components/layout/AdminLayout";
+import MainLayout from "./components/layout/MainLayout";
 import LocationsPage from "./pages/admin/LocationsPage";
 import CategoriesPage from "./pages/admin/CategoriesPage";
 import ScrapingPage from "./pages/admin/ScrapingPage";
-import SitemapIndexPage from "./pages/sitemap/SitemapIndexPage";
-import LocationSitemapPage from "./pages/sitemap/LocationSitemapPage";
-import PagesSitemapPage from "./pages/sitemap/PagesSitemapPage";
-import AnalyticsDashboard from "./components/AnalyticsDashboard";
-import ErrorMonitoringDashboard from "./components/ErrorMonitoringDashboard";
+import HomePage from "./pages/HomePage";
+import AboutPage from "./pages/AboutPage";
+import ContactPage from "./pages/ContactPage";
+import ProfilePage from "./pages/ProfilePage";
+import AuthPage from "./pages/AuthPage";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
+import { AuthProvider } from '@/components/AuthContext';
+import { AdminProtectedRoute } from '@/components/admin/AdminProtectedRoute';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: process.env.NODE_ENV === 'production' ? 3 : 0,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    },
-  },
-});
+const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<MainLayout />}>
-              <Route index element={<HomePage />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/category/:categorySlug" element={<CategoryPage />} />
-              <Route path="/:categorySlug/:locationSlug" element={<LocationPage />} />
-            </Route>
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route path="" element={<AnalyticsDashboard />} />
-              <Route path="locations" element={<LocationsPage />} />
-              <Route path="categories" element={<CategoriesPage />} />
-              <Route path="scraping" element={<ScrapingPage />} />
-              <Route path="analytics" element={<AnalyticsDashboard />} />
-              <Route path="monitoring" element={<ErrorMonitoringDashboard />} />
-            </Route>
-            <Route path="/sitemap.xml" element={<SitemapIndexPage />} />
-            <Route path="/sitemap-pages.xml" element={<PagesSitemapPage />} />
-            <Route path="/sitemap-:categorySlug.xml" element={<LocationSitemapPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <RouterProvider router={createRouter()} />
       </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+}
 
-export default App;
+function createRouter() {
+  return createBrowserRouter([
+    {
+      path: "/",
+      element: <MainLayout />,
+      children: [
+        {
+          path: "/",
+          element: <HomePage />,
+        },
+        {
+          path: "/about",
+          element: <AboutPage />,
+        },
+        {
+          path: "/contact",
+          element: <ContactPage />,
+        },
+        {
+          path: "/profile",
+          element: <ProfilePage />,
+        },
+      ],
+    },
+    {
+      path: "/auth",
+      element: <AuthPage />,
+    },
+    {
+      path: "/admin",
+      element: (
+        <AdminLayout>
+          <AdminProtectedRoute>
+            <Navigate to="/admin/locations" replace />
+          </AdminProtectedRoute>
+        </AdminLayout>
+      ),
+    },
+    {
+      path: "/admin/locations",
+      element: (
+        <AdminLayout>
+          <AdminProtectedRoute>
+            <LocationsPage />
+          </AdminProtectedRoute>
+        </AdminLayout>
+      ),
+    },
+    {
+      path: "/admin/categories",
+      element: (
+        <AdminLayout>
+          <AdminProtectedRoute>
+            <CategoriesPage />
+          </AdminProtectedRoute>
+        </AdminLayout>
+      ),
+    },
+    {
+      path: "/admin/scraping",
+      element: (
+        <AdminLayout>
+          <AdminProtectedRoute>
+            <ScrapingPage />
+          </AdminProtectedRoute>
+        </AdminLayout>
+      ),
+    },
+    // Auth routes
+    {
+      path: "/auth/login",
+      element: <LoginPage />
+    },
+    {
+      path: "/auth/register",
+      element: <RegisterPage />
+    },
+  ]);
+}
