@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DatabaseLocationService } from "@/services/DatabaseLocationService";
@@ -10,10 +11,10 @@ import { N8nWebhookSetup } from "@/components/admin/N8nWebhookSetup";
 import PlaceInfoManager from "@/components/admin/PlaceInfoManager";
 import { AddLocationForm } from "@/components/admin/AddLocationForm";
 import { EditLocationForm } from "@/components/admin/EditLocationForm";
-import { Location } from "@/types/location";
+import { Location, LocationCategory, CATEGORY_LABELS } from "@/types/location";
 
 export default function LocationsPage() {
-  const [page] = useState(1);
+  const [page, setPage] = useState(1);
   const { toast } = useToast();
   const [isWebhookDialogOpen, setIsWebhookDialogOpen] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
@@ -110,7 +111,7 @@ export default function LocationsPage() {
             locations?.map((location) => (
               <TableRow key={location.id}>
                 <TableCell>{location.name}</TableCell>
-                <TableCell>{location.category}</TableCell>
+                <TableCell>{CATEGORY_LABELS[location.category as LocationCategory]}</TableCell>
                 <TableCell>{location.address}</TableCell>
                 <TableCell>{location.compositeScore ?? location.rating}</TableCell>
                 <TableCell>
